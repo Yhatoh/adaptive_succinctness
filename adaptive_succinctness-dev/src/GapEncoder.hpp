@@ -18,6 +18,6 @@ public:
   uint64_t bits_tunstall_seq();
 private:
   void get_gaps(std::vector<uint64_t> &pb, std::vector<uint32_t> &res);
-}
+};
 
 #endif

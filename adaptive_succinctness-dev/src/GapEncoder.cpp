@@ -7,7 +7,7 @@ GapEncoder::GapEncoder(sdsl::bit_vector &bv) {
 GapEncoder::GapEncoder(std::vector<uint64_t> &pb) {
   std::vector<uint32_t> gaps(pb.size(), 0);
   get_gaps(pb, gaps);
-  tunstall_coder(res, 512, 65536);
+  tc = tunstall_coder(gaps, 512, 65536);
 }
 
 void GapEncoder::get_gaps(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
@@ -18,5 +18,5 @@ void GapEncoder::get_gaps(std::vector<uint64_t> &pb, std::vector<uint32_t> &res)
 }
 
 uint64_t GapEncoder::bits_tunstall_seq() {
-  return 8 * tunstall_seq.size();
+  return 8 * tc.size();
 }

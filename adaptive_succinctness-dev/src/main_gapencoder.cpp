@@ -12,7 +12,7 @@
 #include "GapEncoder.hpp"
 
 int main(int argc, char **argv) {
-  vector<uint64_t> seq;
+  std::vector<uint64_t> seq;
   utils::read_input_file(argv[1], seq);
   GapEncoder ge(seq);
   std::cout << ge.bits_tunstall_seq() << "\n";
