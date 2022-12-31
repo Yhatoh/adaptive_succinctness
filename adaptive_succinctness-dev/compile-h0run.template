@@ -1,0 +1,3 @@
+SDSL_INCLUDE="/path/to/sdsl/include"
+SDSL_LIBS="/path/to/sdsl/lib"
+g++ src/main.cpp -o h0run -O9 -std=c++11 -I${SDSL_INCLUDE} -L${SDSL_LIBS} -lsdsl -DMAX_SYMBOL_NUMBER=10000000 -DLOG2_MAX_SYMBOL_NUMBER=24 -DDEFAULT_BLOCK_LEN=131072 -DLINUX

@@ -1,0 +1,9 @@
+/h0run
+/compile-h0run
+/data
+/.vscode
+/**.DS_Store
+/**screenlog.*
+/build
+/screenlogs
+/Makefile
