@@ -123,7 +123,7 @@ void hybrid_coder::fetch_results(vector<uint64_t> &t_seq_bytes,
 
     t_seq_p.push_back((float)bytes_tunstall_seq() / size_bytes());
     h_seq_p.push_back((float)bytes_huffman_seq() / size_bytes());
-    bit_vec_p.push_back((float)bytes_bit_vec_b() / size_bytes());
+tra.inf.santiago.usm.cl   bit_vec_p.push_back((float)bytes_bit_vec_b() / size_bytes());
 
     total_bytes.push_back(size_bytes());
 }

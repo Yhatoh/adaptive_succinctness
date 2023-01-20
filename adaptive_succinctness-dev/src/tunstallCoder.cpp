@@ -2,7 +2,8 @@
 
 using namespace std;
 
-void tunstall_coder::traverse(vector<tree_node>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
+template< uint16_t w >
+void tunstall_coder<w>::traverse(vector<tree_node>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
               vector<uint64_t>& currcode) {
     uint64_t i, cursum;
 
@@ -13,8 +14,8 @@ void tunstall_coder::traverse(vector<tree_node>& tree, uint64_t curnode, uint64_
             tree[curnode].first = curindex;  // dictionary index of this code
             cursum = 0;
             for (uint64_t j = 0; j < currcode.size(); ++j) {
-                cursum += map_table[currcode[j]];
-                D[curindex].push_back(cursum);
+                 cursum += map_table[currcode[j]];
+                 D[curindex].push_back(cursum);
             }
             curindex++;
         } else {
@@ -31,16 +32,19 @@ void tunstall_coder::traverse(vector<tree_node>& tree, uint64_t curnode, uint64_
     }
 }
 
-tunstall_coder::tunstall_coder() {
+template< uint16_t w >
+tunstall_coder<w>::tunstall_coder() {
     D_size = 65536;
 }
 
-tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint64_t D_size_init) {
+template< uint16_t w >
+tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint64_t D_size_init) {
     uint64_t i;
-    D_size = D_size_init;
+    D_size = 1 << w;
 
     bSize = block_size;
 
+    //std::cout << "Create alphabet..." << endl;
     map<uint32_t, uint32_t> alphabet_map;
 
     for (i = 0; i < seq.size(); ++i)
@@ -55,6 +59,7 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
         map_table.push_back(it->first);
     }
 
+    //std::cout << "Freq Table..." << endl;
     vector<uint64_t> freq_table(sigma, 0);
 
     for (i = 0; i < seq.size(); ++i) {
@@ -67,6 +72,7 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
         if (freq_table[i] < Pmin)
             Pmin = freq_table[i];
 
+    //std::cout << "Heap..." << endl;
     priority_queue<heap_node> H;
 
     vector<tree_node> tree(sigma);
@@ -81,6 +87,7 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
 
     // now, tree nodes are expanded according to their probabilities
 
+    //std::cout << "Expansion..." << endl;
     float probMinLeaf = (float)Pmin / freq_table.size();
     uint dictionary_size = sigma;
     while (dictionary_size + sigma <= D_size) {
@@ -100,12 +107,14 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
     // Now, traverse the tree to store the codes into the dictionary
     uint64_t curindex = 0;
 
+    //std::cout << "Traverse..." << endl;
     D = std::vector<vector<uint64_t>>(D_size);
 
     vector<uint64_t> currcode;
 
     traverse(tree, 0, curindex, sigma, currcode);
 
+    //std::cout << "Prefix sum..." << endl;
     uint64_t curnode = 0;
     uint64_t prefix_sum = 0, nelems_block = 0;
 
@@ -116,14 +125,15 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
 
     block.push_back(bElem);
 
+    std::vector<uint32_t> compressed_seq_aux;
     for (i = 0; i < seq.size(); ++i) {
         prefix_sum += seq[i];
         nelems_block++;
         if (tree[curnode + alphabet_map[seq[i]]].second != -1) {
             if (nelems_block == block_size) {
-                compressed_seq.push_back(tree[curnode + alphabet_map[seq[i]]].first);
+                compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[i]]].first);
                 bElem.prefix_sum = prefix_sum;
-                bElem.starting_position = compressed_seq.size();
+                bElem.starting_position = compressed_seq_aux.size();
                 block.push_back(bElem);
                 nelems_block = 0;
                 curnode = 0;
@@ -132,11 +142,11 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
                 curnode = tree[curnode + alphabet_map[seq[i]]].second;
 
         } else {
-            compressed_seq.push_back(tree[curnode + alphabet_map[seq[i]]].first);
+            compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[i]]].first);
             curnode = 0;  // go back to the Tunstall tree root again
             if (nelems_block == block_size) {
                 bElem.prefix_sum = prefix_sum;
-                bElem.starting_position = compressed_seq.size();
+                bElem.starting_position = compressed_seq_aux.size();
                 block.push_back(bElem);
                 nelems_block = 0;
             }
@@ -144,14 +154,21 @@ tunstall_coder::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, uint6
     }
 
     if (nelems_block > 0)
-        compressed_seq.push_back(tree[curnode + alphabet_map[seq[seq.size() - 1]]].first);
+        compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[seq.size() - 1]]].first);
+
+    //std::cout << "Copying to a compressed_seq int_vector..." << "\n";
+    compressed_seq = sdsl::int_vector<w>(compressed_seq_aux.size());
+    for(uint64_t i = 0; i < compressed_seq_aux.size(); i++) {
+      compressed_seq[i] = compressed_seq_aux[i];
+    }
 }
 
-uint32_t tunstall_coder::decode(uint64_t i) {
-    uint64_t b = i / bSize;
+template< uint16_t w >
+uint32_t tunstall_coder<w>::decode(uint64_t i) {
+    uint64_t b_ = i / bSize;
 
-    uint64_t sum = block[b].prefix_sum;
-    uint64_t p = block[b].starting_position;
+    uint64_t sum = block[b_].prefix_sum;
+    uint64_t p = block[b_].starting_position;
 
     uint64_t j, size, nDecode = i % bSize + 1;
 
@@ -170,7 +187,8 @@ uint32_t tunstall_coder::decode(uint64_t i) {
 }
 
 // Tunstall dictionary size, in bytes
-uint64_t tunstall_coder::dict_size() {
+template< uint16_t w >
+uint64_t tunstall_coder<w>::dict_size() {
     uint64_t i;
     uint64_t total_size = 0;
     for (i = 0; i < D.size(); ++i) {
@@ -179,11 +197,30 @@ uint64_t tunstall_coder::dict_size() {
     return total_size;
 }
 
-// compressed size, in bytes
-uint64_t tunstall_coder::size() {
-    return dict_size() + compressed_seq.size() * sizeof(uint16_t) + block.size() * sizeof(blockElement);
+template< uint16_t w >
+uint64_t tunstall_coder<w>::compressed_seq_size() {
+    return compressed_seq.bit_size() / 8;  
+  //return sdsl::size_in_bytes(compressed_seq);
 }
 
-uint64_t tunstall_coder::nCodewords() {
+template< uint16_t w >
+uint64_t tunstall_coder<w>::block_vec_size() {
+    return block.size() * sizeof(blockElement);
+}
+
+// compressed size, in bytes
+template< uint16_t w >
+uint64_t tunstall_coder<w>::size() {
+    return dict_size() + compressed_seq_size() + block_vec_size();
+}
+
+template< uint16_t w >
+uint64_t tunstall_coder<w>::nCodewords() {
     return compressed_seq.size();
 }
+
+template class tunstall_coder<16>;
+template class tunstall_coder<18>;
+template class tunstall_coder<20>;
+template class tunstall_coder<22>;
+template class tunstall_coder<24>;

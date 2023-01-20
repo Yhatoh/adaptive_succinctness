@@ -53,7 +53,7 @@ char* med3v2(char* a, char* b, char* c, int32_t (*cmp)(char*, char*))
 
 #define min(a, b) (a) < (b) ? a : b
 
-void nqsort(char* a, uint32_t n, int32_t es, int32_t (*cmp)(char*, char*))
+void nqsort(char* a, uint32_t n, uint32_t es, int32_t (*cmp)(char*, char*))
 {
     char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
     int32_t d, r, swaptype;

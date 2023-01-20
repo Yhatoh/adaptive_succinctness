@@ -21,10 +21,12 @@ typedef std::pair<float, uint64_t>   heap_node;
 
 typedef std::pair<uint64_t, int64_t> tree_node;
 
+template< uint16_t w >
 class tunstall_coder {
     std::vector<std::vector<uint64_t>> D;  // Dictionary
     std::vector<uint32_t> map_table;
-    std::vector<uint16_t> compressed_seq;
+    //std::vector<uint16_t> compressed_seq;
+    sdsl::int_vector<w> compressed_seq;
     std::vector<blockElement> block;
     //enc_vector<> block_info_prefix_sum;
     //enc_vector<> block_info_starting_position;
@@ -43,6 +45,8 @@ public:
     
     uint32_t decode(uint64_t i);  
     uint64_t dict_size(); // Tunstall dictionary size, in bytes  
+    uint64_t compressed_seq_size();
+    uint64_t block_vec_size();
     uint64_t size(); // compressed size, in bytes 
     uint64_t nCodewords();
 };

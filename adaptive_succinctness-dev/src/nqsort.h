@@ -1,5 +1,4 @@
 
-
 #ifndef _NQSORT_H_
 #define _NQSORT_H_
 
@@ -7,7 +6,7 @@
 extern "C" {
 #endif
 
-void nqsort(char* a, uint32_t n, int32_t es, int32_t (*cmp)(char*, char*));
+void nqsort(char* a, uint32_t n, uint32_t es, int32_t (*cmp)(char*, char*));
 
 #ifdef __cplusplus
 }
