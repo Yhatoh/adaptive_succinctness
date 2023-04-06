@@ -39,29 +39,31 @@ int main(int argc, char **argv) {
   std::cout << "INT VECTOR OF W = 16 " << (double) ge_16.bits_tunstall_seq() / seq.size() << std::endl;
   */
   
-  std::vector< uint64_t > ks = {4, 8, 16, 32, 64};
+  std::vector< uint64_t > ks = {4};//, 8, 16, 32, 64};
   for(uint64_t k : ks) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
-    RunEncoder<16> ge_16(seq, k, 512);
+    RunEncoder<16, 1024> ge_16(seq, k, 512);
     std::cerr << "Done" << std::endl;
     std::cout << "INT VECTOR OF W = 16" << std::endl << (double) ge_16.bits_tunstall_seq() / seq.size() << std::endl;
+    /*
     std::cerr << "Creating top_k = 18" << std::endl;
-    RunEncoder<18> ge_18(seq, k, 512);
+    RunEncoder<18, 32> ge_18(seq, k, 512);
     std::cerr << "Done" << std::endl;
     std::cout << "INT VECTOR OF W = 18 " << std::endl << (double) ge_18.bits_tunstall_seq() / seq.size() << std::endl;
     std::cerr << "Creating top_k = 20" << std::endl;
-    RunEncoder<20> ge_20(seq, k, 512);
+    RunEncoder<20, 32> ge_20(seq, k, 512);
     std::cerr << "Done" << std::endl;
     std::cout << "INT VECTOR OF W = 20 " << std::endl << (double) ge_20.bits_tunstall_seq() / seq.size() << std::endl;
     std::cerr << "Creating top_k = 22" << std::endl;
-    RunEncoder<22> ge_22(seq, k, 512);
+    RunEncoder<22, 32> ge_22(seq, k, 512);
     std::cerr << "Done" << std::endl;
     std::cout << "INT VECTOR OF W = 22 " << std::endl << (double) ge_22.bits_tunstall_seq() / seq.size() << std::endl;
     std::cerr << "Creating top_k = 24" << std::endl;
-    RunEncoder<24> ge_24(seq, k, 512);
+    RunEncoder<24, 32> ge_24(seq, k, 512);
     std::cerr << "Done" << std::endl;
     std::cout << "INT VECTOR OF W = 24 " << std::endl << (double) ge_24.bits_tunstall_seq() / seq.size() << std::endl;
+    */
   }
   return 0;
 }
