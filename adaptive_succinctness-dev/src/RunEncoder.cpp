@@ -1,12 +1,12 @@
 #include "RunEncoder.hpp"
 
-template< uint16_t w, uint64_t bs >
-RunEncoder<w,bs>::RunEncoder(sdsl::bit_vector &bv, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br>
+RunEncoder<w,bs,br>::RunEncoder(sdsl::bit_vector &bv, uint64_t top_k) {
 
 }
 
-template< uint16_t w, uint64_t bs >
-RunEncoder<w,bs>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k, uint64_t block_size) {
+template< uint16_t w, uint64_t bs, uint64_t br >
+RunEncoder<w,bs,br>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k) {
   top_most_freq = top_k;
   std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
 
@@ -19,8 +19,10 @@ RunEncoder<w,bs>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k, uint64_t
   std::vector< uint32_t > R0;
   std::vector< uint32_t > R1;
   uint64_t last = pb[0];
+  s0 = false;
   if(pb[0] > 0) {
-    R0.push_back(pb[0] - 1);
+    s0 = true;
+    R0.push_back(pb[0]);
   }
 
   for(uint64_t i = 1; i < pb.size(); i++) {
@@ -66,49 +68,23 @@ RunEncoder<w,bs>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k, uint64_t
     //GapsR0[i] = PB_R0[i] - PB_R0[i - 1] - 1;
     GapsR0[i] = PB_R0[i] - PB_R0[i - 1];
   }
-  /*
-  std::cerr << "Creating IDX_BITS AND IDX_ONES R0..." << std::endl;
-  idx_bits_r0 = sdsl::int_vector<>(n_r0 / bs + 2, 0);
-  idx_ones_r0 = sdsl::int_vector<>(n_r0 / bs + 2, 0);
-  uint64_t s_idbr0 = 1;
-  uint64_t s_idor0 = 1;
-  uint64_t index = 0;
-  while(index < n_r0) {
-    uint64_t amount = (index + bs < n_r0 ? bs : n_r0 - index + 1);
-    uint64_t next = (index + bs < n_r0 ? index + bs : n_r0);
-    idx_bits_r0[s_idbr0++] = PB_R0[next - 1] + 1;
-    idx_ones_r0[s_idor0++] = idx_ones_r0[s_idor0 - 1] + amount;
-    index = next;
+
+  std::vector< uint64_t > br_R0;
+  uint64_t i; 
+  for(i = br; i < PB_R0.size(); i += br) {
+    br_R0.push_back(PB_R0[i]);
   }
-  */
+  
+  if(i - br < PB_R0.size() - 1)
+    br_R0.push_back(PB_R0[PB_R0.size() - 1] + 1);
+ 
+  block_r0.resize(br_R0[br_R0.size() - 1] + 1);
+  for(auto j : br_R0) {
+    block_r0[j] = 0;
+  }
+
+  br_R0.clear();
   PB_R0.clear();
-
-  /*
-  idx_bits_r0.resize(s_idbr0);
-  idx_ones_r0.resize(s_idor0);
-
-  std::cerr << "Creating L2_BITS AND L2_ONES R0..." << std::endl;
-
-  uint64_t s_l2_r0 = s_idbr0;
-  l2_bits_r0.resize(s_l2_r0);
-  l2_ones_r0.resize(s_l2_r0);
-
-  l2_bits_r0_div = u / s_l2_r0 + (u % s_l2_r0 != 0);
-  for(uint64_t i = 0; i < s_l2_r0; i++) {
-    auto it = std::upper_bound(idx_bits_r0.begin(), idx_bits_r0.end(), i * l2_bits_r0_div);
-    l2_bits_r0[i] - std::distance(idx_bits_r0.begin(), it);
-  }
-
-  l2_ones_r0_div = (n + 1) / s_l2_r0 + ((n + 1) % s_l2_r0 != 0);
-  for(uint64_t i = 0; i < s_l2_r0; i++) {
-    auto it = std::upper_bound(idx_ones_r0.begin(), idx_ones_r0.end(), i * l2_ones_r0_div);
-    l2_ones_r0[i] - std::distance(idx_ones_r0.begin(), it);
-  }
-  sdsl::util::bit_compress(idx_bits_r0);
-  sdsl::util::bit_compress(idx_ones_r0);
-  sdsl::util::bit_compress(l2_bits_r0);
-  sdsl::util::bit_compress(l2_ones_r0);
-  */
 
   std::cerr << "Calculating Gaps R1..." << std::endl;
   //GapsR1[0] = PB_R1[0] - 1;
@@ -116,65 +92,40 @@ RunEncoder<w,bs>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k, uint64_t
   for(uint64_t i = 1; i < GapsR1.size(); i++) {
     //GapsR1[i] = PB_R1[i] - PB_R1[i - 1] - 1;
     GapsR1[i] = PB_R1[i] - PB_R1[i - 1];
+  } 
+
+
+  std::vector< uint64_t > br_R1;
+  for(i = br; i < PB_R1.size(); i += br) {
+    br_R1.push_back(PB_R1[i]);
   }
-  /*
-  std::cerr << "Creating IDX_BITS AND IDX_ONES R1..." << std::endl;
-  idx_bits_r1 = sdsl::int_vector<>(n_r1 / bs + 2, 0);
-  idx_ones_r1 = sdsl::int_vector<>(n_r1 / bs + 2, 0);
-
-  uint64_t s_idbr1 = 1;
-  uint64_t s_idor1 = 1;
-  index = 0;
-  while(index < n_r1) {
-    uint64_t amount = (index + bs < n_r1 ? bs : n_r1 - index + 1);
-    uint64_t next = (index + bs < n_r1 ? index + bs : n_r1);
-    idx_bits_r1[s_idbr1++] = PB_R1[next - 1] + 1;
-    idx_ones_r1[s_idor1++] = idx_ones_r1[s_idor1 - 1] + amount;
-    index = next;
+  
+  if(i - br < PB_R1.size() - 1)
+    br_R1.push_back(PB_R1[PB_R1.size() - 1] + 1);
+ 
+  block_r1.resize(br_R1[br_R1.size() - 1] + 1);
+  for(auto j : br_R1) {
+    block_r1[j] = 1;
   }
-
-  idx_bits_r1.resize(s_idbr1);
-  idx_ones_r1.resize(s_idor1);
-  */
-  /*
-  std::cerr << "Creating L2_BITS AND L2_ONES R0..." << std::endl;
-  uint64_t s_l2_r1 = s_idbr1;
-  l2_bits_r1.resize(s_l2_r1);
-  l2_ones_r1.resize(s_l2_r1);
-
-  l2_bits_r1_div = u / s_l2_r1 + (u % s_l2_r1 != 0);
-  for(uint64_t i = 0; i < s_l2_r1; i++) {
-    auto it = std::upper_bound(idx_bits_r1.begin(), idx_bits_r1.end(), i * l2_bits_r1_div);
-    l2_bits_r1[i] - std::distance(idx_bits_r1.begin(), it);
-  }
-
-  l2_ones_r1_div = (n + 1) / s_l2_r1 + ((n + 1) % s_l2_r1 != 0);
-  for(uint64_t i = 0; i < s_l2_r1; i++) {
-    auto it = std::upper_bound(idx_ones_r1.begin(), idx_ones_r1.end(), i * l2_ones_r1_div);
-    l2_ones_r1[i] - std::distance(idx_ones_r1.begin(), it);
-  }
-
-  sdsl::util::bit_compress(idx_bits_r1);
-  sdsl::util::bit_compress(idx_ones_r1);
-  sdsl::util::bit_compress(l2_bits_r1);
-  sdsl::util::bit_compress(l2_ones_r1);
-  */
-
+  
+  br_R1.clear();
   PB_R1.clear();
 
-  //std::cerr << "Creating Tunstall..." << std::endl;
-  //tc_r1 = tunstall_coder<w>(GapsR0, 512, 1 << w);
-  std::cerr << "Creating Top-k Encoding..." << std::endl;
-  top_k_encoding(GapsR0, block_size, false);
-  top_k_encoding(GapsR1, block_size, true);
+  sdsl::util::init_support(select_block_r0, &block_r0);
+  sdsl::util::init_support(rank_block_r0, &block_r0);
+  sdsl::util::init_support(select_block_r1, &block_r1);
+  sdsl::util::init_support(rank_block_r1, &block_r1);
 
-  //tc_r0 = tunstall_coder<w>(GapsR1, 512, 1 << w);
-  //tc = tunstall_coder<w>(gaps, 512, 1 << w);
-  //std::cerr << "Done..." << std::endl;
+  //std::cerr << "Creating Tunstall..." << std::endl;
+  std::cerr << "Creating Top-k Encoding..." << std::endl;
+  top_k_encoding(GapsR0, false);
+  top_k_encoding(GapsR1, true);
+
+  std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
   uint64_t sum = 0;
   res[0] = pb[0] - 1;
   for(uint64_t i = 1; i < pb.size(); i++) {
@@ -185,8 +136,8 @@ uint64_t RunEncoder<w,bs>::get_runs(std::vector<uint64_t> &pb, std::vector<uint3
   return sum;
 }
 
-template< uint16_t w, uint64_t bs >
-void RunEncoder<w,bs>::top_k_encoding(std::vector< uint32_t > &seq, int block_size, bool type) {
+template< uint16_t w, uint64_t bs, uint64_t br >
+void RunEncoder<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
   //std::cerr << "Creating frequency map..." << std::endl;
   std::map< uint32_t, uint64_t > freq_map;
   for(uint64_t i = 0; i < seq.size(); i++) {
@@ -215,14 +166,20 @@ void RunEncoder<w,bs>::top_k_encoding(std::vector< uint32_t > &seq, int block_si
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Filling bitvector..." << std::endl;
 
-  tc_or_huffman = sdsl::bit_vector(seq.size(), 0);
+  if(type) {
+    tc_or_huffman_r1 = sdsl::bit_vector(seq.size(), 0);
+  } else {
+    tc_or_huffman_r0 = sdsl::bit_vector(seq.size(), 0);
+  }
+
   std::vector< uint32_t > tc_seq;
   std::vector< uint32_t > hf_seq;
 
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      tc_or_huffman[i] = 1;
+      if(type) tc_or_huffman_r1[i] = 1;
+      else tc_or_huffman_r0[i] = 1;
     } else {
       hf_seq.push_back(seq[i]);
     }
@@ -231,22 +188,23 @@ void RunEncoder<w,bs>::top_k_encoding(std::vector< uint32_t > &seq, int block_si
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Creating tunstall and huffman..." << std::endl;
   std::cout << "Percentage of symbols in Tunstall sequence: " << (double)tc_seq.size() / seq.size() << std::endl;
+  std::cout << tc_seq.size() << " " << hf_seq.size() << "\n";
   symbol_tc_p = (double)tc_seq.size() / seq.size() ;
 
   // r1
   if(type) {
-    tc_r1_top_k = tunstall_coder<w>(tc_seq, block_size, 1 << w);
-    huffman_r1.encode(hf_seq, block_size);
+    tc_r1_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w);
+    huffman_r1.encode(hf_seq, bs);
   // r0
   } else {
-    tc_r0_top_k = tunstall_coder<w>(tc_seq, block_size, 1 << w); 
-    huffman_r0.encode(hf_seq, block_size);
+    tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w); 
+    huffman_r0.encode(hf_seq, bs);
   }
   //std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::bits_tunstall_seq() {
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::bits_tunstall_seq() {
   /*std::cout << "--- Gaps R0 ---" << std::endl;
   std::cout << "Dict size: " << tc_r0.dict_size() * 8 << " " << (double) tc_r0.dict_size() * 8 / n << std::endl;
   std::cout << "Compressed seq size: " << tc_r0.compressed_seq_size() * 8 << " " << (double) tc_r0.compressed_seq_size() * 8 / n << std::endl;
@@ -260,41 +218,148 @@ uint64_t RunEncoder<w,bs>::bits_tunstall_seq() {
   std::cout << "HF_R0: " << huffman_r0.size() * 8 << std::endl;
   std::cout << "TC_R1: " << tc_r1_top_k.size() * 8 << std::endl;
   std::cout << "HF_R1: " << huffman_r1.size() * 8 << std::endl;
-  std::cout << "IDX: "<< bits_idx() << std::endl;
-  std::cout << "L2: "<< bits_l2() << std::endl;
-  return 8 * sdsl::size_in_bytes(tc_or_huffman) + 
+  return 8 * sdsl::size_in_bytes(tc_or_huffman_r1) + 
+         8 * sdsl::size_in_bytes(tc_or_huffman_r0) +
          8 * tc_r0_top_k.size() + 8 * tc_r1_top_k.size() +
          8 * huffman_r0.size() + 8 * huffman_r1.size() +
-         bits_idx() + bits_l2();
-  //return 8 * tc.size();
+         8 * size_block_r0() + 8 * size_block_r1();
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::bits_idx() {
-  return 8 * sdsl::size_in_bytes(idx_bits_r0) + 8 * sdsl::size_in_bytes(idx_ones_r0) +
-         8 * sdsl::size_in_bytes(idx_bits_r1) + 8 * sdsl::size_in_bytes(idx_ones_r1);
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::size_block_r1() {
+  return sdsl::size_in_bytes(block_r1) + sdsl::size_in_bytes(select_block_r1) + sdsl::size_in_bytes(rank_block_r1);
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::bits_l2() {
-  return 8 * sdsl::size_in_bytes(l2_bits_r0) + 8 * sdsl::size_in_bytes(l2_ones_r0) +
-         8 * sdsl::size_in_bytes(l2_bits_r1) + 8 * sdsl::size_in_bytes(l2_ones_r1);
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::size_block_r0() {
+  return sdsl::size_in_bytes(block_r0) + sdsl::size_in_bytes(select_block_r0) + sdsl::size_in_bytes(rank_block_r0);
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::select(uint64_t k) {
-  uint64_t pos =
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::select(uint64_t k) {
+  assert(k <= n);
+
+  uint64_t block = rank_block_r1(k);
+
+  uint64_t pos = 0;
+  // first block
+  if(block == 0) {
+    uint64_t ones = 0;
+    bool take_gr0 = s0;
+    uint64_t gap_pos = 0;
+    uint64_t gap_tc_r0 = 0;
+    uint64_t gap_huff_r0 = 0;
+    uint64_t gap_tc_r1 = 0;
+    uint64_t gap_huff_r1 = 0;
+    //std::cout << "START WITH 0 " << s0 << "\n";
+    while(ones < k) {
+      //std::cout << "GAPPOS " << gap_pos << std::endl;
+      if(take_gr0) {
+        //std::cout << "GAP 0" << std::endl;
+        //std::cout << tc_or_huffman_r0[gap_pos] << std::endl;
+        uint64_t act_zeros = 0;
+        if(tc_or_huffman_r0[gap_pos]) {
+          if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+          else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+          gap_tc_r0++;
+        } else {
+          if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
+          else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+          gap_huff_r0++;
+        }
+        //std::cout << "AMOUNT 0'S " << act_zeros << std::endl;
+        pos += act_zeros;
+        //std::cout << "POS " << pos << std::endl;
+        if(!s0) {
+          gap_pos++;
+        }
+      } else {
+        //std::cout << "GAP 1" << std::endl;
+        //std::cout << tc_or_huffman_r1[gap_pos] << std::endl;
+        uint64_t act_ones = 0;
+        if(tc_or_huffman_r1[gap_pos]) {
+          if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+          else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        } else {
+          if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
+          else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        }
+        //std::cout << "AMOUNT 1'S " << act_ones << std::endl;
+        pos += act_ones;
+        //std::cout << "POS " << pos << std::endl;
+        ones += act_ones;
+        if(s0) {
+          gap_pos++;
+        }
+      }
+      take_gr0 = !take_gr0;
+    }
+    while(ones > k) {
+      pos--;
+      ones--;
+    } 
+  // n block
+  } else {
+    std::cout << block << std::endl;
+    uint64_t zeros = 0;
+    uint64_t ones = select_block_r1(block);
+    
+    uint64_t gap_pos = block * br;
+    if(s0) {
+      zeros = select_block_r0(block);
+      pos += zeros;
+      gap_pos++;
+    } else {
+      if(block > 1) {
+        zeros =  select_block_r0(block - 1);
+        pos += zeros;
+      }
+    }
+
+    pos += ones;
+    bool take_gr0 = true;
+    while(ones < k) {
+      if(take_gr0) {
+        if(tc_or_huffman_r0[gap_pos]) {
+          pos += tc_r0_top_k.decode(gap_pos) - tc_r0_top_k.decode(gap_pos - 1);
+        } else {
+          pos += huffman_r0.decode(gap_pos) - huffman_r0.decode(gap_pos - 1);
+        }
+        if(!s0) {
+          gap_pos++;
+        }
+      } else {
+        uint64_t act_ones = 0;
+        if(tc_or_huffman_r1[gap_pos]) {
+          act_ones = tc_r1_top_k.decode(gap_pos) - tc_r1_top_k.decode(gap_pos - 1);
+        } else {
+          act_ones = huffman_r1.decode(gap_pos) - huffman_r1.decode(gap_pos - 1);
+        }
+        pos += act_ones;
+        ones += act_ones;
+        if(s0) {
+          gap_pos++;
+        }
+      }
+      take_gr0 = !take_gr0;
+    }
+    while(ones > k) {
+      pos--;
+      ones--;
+    }
+  }
+  return pos - 1;
 }
 
-template< uint16_t w, uint64_t bs >
-uint64_t RunEncoder<w,bs>::rank(uint64_t i) {
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoder<w,bs,br>::rank(uint64_t i) {
 
 }
 
-template class RunEncoder<16, 256>;
-template class RunEncoder<16, 512>;
-template class RunEncoder<16, 1024>;
-template class RunEncoder<18, 1024>;
-template class RunEncoder<20, 1024>;
-template class RunEncoder<22, 1024>;
-template class RunEncoder<24, 1024>;
+template class RunEncoder<16, 256, 512>;
+template class RunEncoder<16, 512, 512>;
+template class RunEncoder<16, 1024, 512>;
+//template class RunEncoder<18, 1024>;
+//template class RunEncoder<20, 1024>;
+//template class RunEncoder<22, 1024>;
+//template class RunEncoder<24, 1024>;
