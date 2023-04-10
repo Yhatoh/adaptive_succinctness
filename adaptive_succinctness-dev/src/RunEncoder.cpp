@@ -77,6 +77,7 @@ RunEncoder<w,bs,br>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k) {
     GapsR0[i] = PB_R0[i] - PB_R0[i - 1];
   }
 
+  std::cerr << "Creatings blocks of R0..." << std::endl;
   std::vector< uint64_t > br_R0;
   uint64_t i; 
   for(i = br; i <= PB_R0.size(); i += br) {
@@ -87,8 +88,9 @@ RunEncoder<w,bs,br>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k) {
     br_R0.push_back(PB_R0[PB_R0.size() - 1]);
  
   block_r0.resize(br_R0[br_R0.size() - 1] + 1);
-  for(auto j : br_R0) {
-    block_r0[j] = 1;
+  sdsl::util::_set_zero_bits(block_r0);
+  for(uint64_t j = 0; j < br_R0.size(); j++) {
+    block_r0[br_R0[j]] = 1;
   }
 
   br_R0.clear();
@@ -103,6 +105,7 @@ RunEncoder<w,bs,br>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k) {
   } 
 
 
+  std::cerr << "Creatings blocks of R1..." << std::endl;
   std::vector< uint64_t > br_R1;
   for(i = br; i <= PB_R1.size(); i += br) {
     br_R1.push_back(PB_R1[i - 1]);
@@ -112,6 +115,7 @@ RunEncoder<w,bs,br>::RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k) {
     br_R1.push_back(PB_R1[PB_R1.size() - 1]);
  
   block_r1.resize(br_R1[br_R1.size() - 1] + 1);
+  sdsl::util::_set_zero_bits(block_r1);
   for(auto j : br_R1) {
     block_r1[j] = 1;
   }
@@ -252,119 +256,78 @@ uint64_t RunEncoder<w,bs,br>::select(uint64_t k) {
 
   uint64_t block = rank_block_r1(k);
 
-  std::cerr << "BLOCK: " << block << std::endl;
+  //std::cerr << "BLOCK: " << block << std::endl;
   uint64_t pos = 0;
-  // first block
-  if(block == 0) {
-    uint64_t ones = 0;
-    bool take_gr0 = true;
-    uint64_t gap_pos = 0;
-    uint64_t gap_tc_r0 = 0;
-    uint64_t gap_huff_r0 = 0;
-    uint64_t gap_tc_r1 = 0;
-    uint64_t gap_huff_r1 = 0;
-    while(ones < k) {
-      //std::cerr << "GAPPOS " << gap_pos << std::endl;
-      if(take_gr0) {
-        //std::cerr << "GAP 0" << std::endl;
-        //std::cerr << tc_or_huffman_r0[gap_pos] << std::endl;
-        uint64_t act_zeros = 0;
-        if(tc_or_huffman_r0[gap_pos]) {
-          if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-          else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
-          gap_tc_r0++;
-        } else {
-          if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
-          else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
-          gap_huff_r0++;
-        }
-        //std::cerr << "AMOUNT 0'S " << act_zeros << std::endl;
-        pos += act_zeros;
-        //std::cerr << "POS " << pos << std::endl;
-      } else {
-        //std::cerr << "GAP 1" << std::endl;
-        //std::cerr << tc_or_huffman_r1[gap_pos] << std::endl;
-        uint64_t act_ones = 0;
-        if(tc_or_huffman_r1[gap_pos]) {
-          if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-          else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
-          gap_tc_r1++;
-        } else {
-          if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
-          else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
-          gap_huff_r1++;
-        }
-        //std::cerr << "AMOUNT 1'S " << act_ones << std::endl;
-        pos += act_ones;
-        //std::cerr << "POS " << pos << std::endl;
-        ones += act_ones;
-        gap_pos++;
-      }
-      take_gr0 = !take_gr0;
-    }
-    while(ones > k) {
-      pos--;
-      ones--;
-    } 
-  // n block
-  } else {
-    uint64_t ones = select_block_r1(block);
-    uint64_t zeros = select_block_r0(block);
-    //std::cerr << "PREV ONES: " << ones << std::endl;
-    //std::cerr << "PREV ZEROS: " << zeros << std::endl;
-    
-    uint64_t gap_pos = block * br;
+  bool take_gr0 = true;
 
+  // ones and zeros until block
+  uint64_t ones = 0;
+  uint64_t zeros = 0;
+
+  // actual gap
+  uint64_t gap_pos = 0;
+
+  // current gap in tunstall R0
+  uint64_t gap_tc_r0 = 0;
+  // current gap in huffman R0
+  uint64_t gap_huff_r0 = 0;
+  // current gap in tunstall R1
+  uint64_t gap_tc_r1 = 0;
+  // current gap in huffman R1
+  uint64_t gap_huff_r1 = 0;
+  
+  if(block > 0) {
+    // ones and zeros until block
+    ones = select_block_r1(block);
+    zeros = select_block_r0(block);
+
+    // curr gap pos
+    gap_pos = block * br;
+
+    // actual gaps in each structure
+    gap_tc_r0 = rank_tchuff_r0(gap_pos);
+    gap_huff_r0 = gap_pos - gap_tc_r0;
+    gap_tc_r1 = rank_tchuff_r1(gap_pos);
+    gap_huff_r1 = gap_pos  - gap_tc_r1;
+
+    // pos before block
     pos += zeros;
     pos += ones;
-    bool take_gr0 = true;
-    uint64_t gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    uint64_t gap_huff_r0 = gap_pos - gap_tc_r0;
-    uint64_t gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    uint64_t gap_huff_r1 = gap_pos  - gap_tc_r1;
-    while(ones < k) {
-      //std::cerr << "GAPPOS " << gap_pos << std::endl;
-      if(take_gr0) {
-        //std::cerr << "GAP 0" << std::endl;
-        //std::cerr << tc_or_huffman_r0[gap_pos] << std::endl;
-        uint64_t act_zeros = 0;
-        if(tc_or_huffman_r0[gap_pos]) {
-          if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-          else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
-          gap_tc_r0++;
-        } else {
-          if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
-          else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
-          gap_huff_r0++;
-        }
-        //std::cerr << "AMOUNT 0'S " << act_zeros << std::endl;
-        pos += act_zeros;
-        //std::cerr << "POS " << pos << std::endl;
+  }
+
+  while(ones < k) {
+    if(take_gr0) {
+      uint64_t act_zeros = 0;
+      if(tc_or_huffman_r0[gap_pos]) {
+        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        gap_tc_r0++;
       } else {
-        //std::cerr << "GAP 1" << std::endl;
-        //std::cerr << tc_or_huffman_r1[gap_pos] << std::endl;
-        uint64_t act_ones = 0;
-        if(tc_or_huffman_r1[gap_pos]) {
-          if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-          else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
-          gap_tc_r1++;
-        } else {
-          if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
-          else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
-          gap_huff_r1++;
-        }
-        //std::cerr << "AMOUNT 1'S " << act_ones << std::endl;
-        pos += act_ones;
-        //std::cerr << "POS " << pos << std::endl;
-        ones += act_ones;
-        gap_pos++;
+        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
+        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+        gap_huff_r0++;
       }
-      take_gr0 = !take_gr0;
+      pos += act_zeros;
+    } else {
+      uint64_t act_ones = 0;
+      if(tc_or_huffman_r1[gap_pos]) {
+        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        gap_tc_r1++;
+      } else {
+        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
+        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        gap_huff_r1++;
+      }
+      pos += act_ones;
+      ones += act_ones;
+      gap_pos++;
     }
-    while(ones > k) {
-      pos--;
-      ones--;
-    }
+    take_gr0 = !take_gr0;
+  }
+  while(ones > k) {
+    pos--;
+    ones--;
   }
   return pos - 2;
 }
