@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   */
   sdsl::bit_vector bv;
   bv.resize(100000);
-  sdsl::util::set_random_bits(bv);
+  sdsl::util::set_random_bits(bv, 42);
 
   std::vector< uint64_t > seq;
   uint64_t count = 0;
@@ -48,12 +48,13 @@ int main(int argc, char **argv) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
     RunEncoder<16, 1024, 512> ge_16(seq, k);
-    for(uint64_t i = 1; i < count; i++) {
+    std::cout << seq.size() << "\n";
+    for(uint64_t i = 1; i <= seq.size(); i++) {
       if(ge_16.select(i) != select(i)) {
-        std::cout << i << std::endl;
+        std::cout << "Query " << i << std::endl;
         std::cout << "SELECT RUNENCODER" << std::endl;
         std::cout << ge_16.select(i) << std::endl;
-        std::cout << "SELECT BV" << std::endl;
+        std::cout << "SELECT REAL" << std::endl;
         std::cout << select(i) << std::endl;
         break;
       }

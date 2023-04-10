@@ -22,7 +22,10 @@ public:
   huffman_coder huffman_r1;
 
   sdsl::bit_vector tc_or_huffman_r0;
+  sdsl::rank_support_v5<1> rank_tchuff_r0;
+
   sdsl::bit_vector tc_or_huffman_r1;
+  sdsl::rank_support_v5<1> rank_tchuff_r1;
 
   sdsl::bit_vector block_r1;
   sdsl::select_support_mcl<1> select_block_r1;
@@ -40,8 +43,6 @@ public:
   uint64_t n_r1; // ones
   uint64_t top_most_freq;
   uint64_t symbol_tc_p;
-  // start with 0 or 1
-  bool s0; 
 
   RunEncoder(sdsl::bit_vector &bv, uint64_t top_k);
   RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k);
