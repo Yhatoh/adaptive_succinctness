@@ -1,12 +1,12 @@
-#include "RunEncoderBitVector.hpp"
+#include "RunEncoderSDArray.hpp"
 
 template< uint16_t w, uint64_t bs, uint64_t br>
-RunEncoderBitVector<w,bs,br>::RunEncoderBitVector(sdsl::bit_vector &bv, uint64_t top_k) {
+RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(sdsl::bit_vector &bv, uint64_t top_k) {
 
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-RunEncoderBitVector<w,bs,br>::RunEncoderBitVector(std::vector<uint64_t> &pb, uint64_t top_k) {
+RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_t top_k) {
   top_most_freq = top_k;
   std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
 
@@ -87,11 +87,12 @@ RunEncoderBitVector<w,bs,br>::RunEncoderBitVector(std::vector<uint64_t> &pb, uin
   if(PB_R0.size() % br != 0)
     br_R0.push_back(PB_R0[PB_R0.size() - 1]);
  
-  block_r0.resize(br_R0[br_R0.size() - 1] + 1);
-  sdsl::util::_set_zero_bits(block_r0);
-  for(uint64_t j = 0; j < br_R0.size(); j++) {
-    block_r0[br_R0[j]] = 1;
-  }
+  //block_r0.resize(br_R0[br_R0.size() - 1] + 1);
+  //sdsl::util::_set_zero_bits(block_r0);
+  //for(uint64_t j = 0; j < br_R0.size(); j++) {
+  //  block_r0[br_R0[j]] = 1;
+  //}
+  block_r0 = sdsl::sd_vector<>(br_R0.begin(), br_R0.end());
 
   br_R0.clear();
   PB_R0.clear();
@@ -114,12 +115,14 @@ RunEncoderBitVector<w,bs,br>::RunEncoderBitVector(std::vector<uint64_t> &pb, uin
   if(PB_R1.size() % br != 0)
     br_R1.push_back(PB_R1[PB_R1.size() - 1]);
  
-  block_r1.resize(br_R1[br_R1.size() - 1] + 1);
-  sdsl::util::_set_zero_bits(block_r1);
-  for(auto j : br_R1) {
-    block_r1[j] = 1;
-  }
+  //block_r1.resize(br_R1[br_R1.size() - 1] + 1);
+  //sdsl::util::_set_zero_bits(block_r1);
+  //for(auto j : br_R1) {
+  //  block_r1[j] = 1;
+  //}
   
+  block_r1 = sdsl::sd_vector<>(br_R1.begin(), br_R1.end());
+
   br_R1.clear();
   PB_R1.clear();
 
@@ -140,7 +143,7 @@ RunEncoderBitVector<w,bs,br>::RunEncoderBitVector(std::vector<uint64_t> &pb, uin
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
+uint64_t RunEncoderSDArray<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
   uint64_t sum = 0;
   res[0] = pb[0] - 1;
   for(uint64_t i = 1; i < pb.size(); i++) {
@@ -152,7 +155,7 @@ uint64_t RunEncoderBitVector<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-void RunEncoderBitVector<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
+void RunEncoderSDArray<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
   //std::cerr << "Creating frequency map..." << std::endl;
   std::map< uint32_t, uint64_t > freq_map;
   for(uint64_t i = 0; i < seq.size(); i++) {
@@ -181,11 +184,7 @@ void RunEncoderBitVector<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, 
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Filling bitvector..." << std::endl;
 
-  if(type) {
-    tc_or_huffman_r1 = sdsl::bit_vector(seq.size(), 0);
-  } else {
-    tc_or_huffman_r0 = sdsl::bit_vector(seq.size(), 0);
-  }
+  std::vector< uint64_t > tc_or_huff_seq;
 
   std::vector< uint32_t > tc_seq;
   std::vector< uint32_t > hf_seq;
@@ -193,13 +192,18 @@ void RunEncoderBitVector<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, 
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      if(type) tc_or_huffman_r1[i] = 1;
-      else tc_or_huffman_r0[i] = 1;
+      tc_or_huff_seq.push_back(i);
     } else {
       hf_seq.push_back(seq[i]);
     }
   }
  
+  if(type) {
+    tc_or_huffman_r1 = sdsl::sd_vector<>(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
+  } else {
+    tc_or_huffman_r0 = sdsl::sd_vector<>(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
+  }
+
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Creating tunstall and huffman..." << std::endl;
   std::cerr << "Percentage of symbols in Tunstall sequence: " << (double)tc_seq.size() / seq.size() << std::endl;
@@ -219,7 +223,7 @@ void RunEncoderBitVector<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, 
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::bits_tunstall_seq() {
+uint64_t RunEncoderSDArray<w,bs,br>::bits_tunstall_seq() {
   /*std::cout << "--- Gaps R0 ---" << std::endl;
   std::cout << "Dict size: " << tc_r0.dict_size() * 8 << " " << (double) tc_r0.dict_size() * 8 / n << std::endl;
   std::cout << "Compressed seq size: " << tc_r0.compressed_seq_size() * 8 << " " << (double) tc_r0.compressed_seq_size() * 8 / n << std::endl;
@@ -241,17 +245,17 @@ uint64_t RunEncoderBitVector<w,bs,br>::bits_tunstall_seq() {
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::size_block_r1() {
+uint64_t RunEncoderSDArray<w,bs,br>::size_block_r1() {
   return sdsl::size_in_bytes(block_r1) + sdsl::size_in_bytes(select_block_r1) + sdsl::size_in_bytes(rank_block_r1);
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::size_block_r0() {
+uint64_t RunEncoderSDArray<w,bs,br>::size_block_r0() {
   return sdsl::size_in_bytes(block_r0) + sdsl::size_in_bytes(select_block_r0) + sdsl::size_in_bytes(rank_block_r0);
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::select(uint64_t k) {
+uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
   assert(k <= n);
 
   uint64_t block = rank_block_r1(k);
@@ -338,14 +342,14 @@ uint64_t RunEncoderBitVector<w,bs,br>::select(uint64_t k) {
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderBitVector<w,bs,br>::rank(uint64_t i) {
+uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
 
 }
 
-template class RunEncoderBitVector<16, 256, 512>;
-template class RunEncoderBitVector<16, 512, 512>;
-template class RunEncoderBitVector<16, 1024, 512>;
-//template class RunEncoderBitVector<18, 1024>;
-//template class RunEncoderBitVector<20, 1024>;
-//template class RunEncoderBitVector<22, 1024>;
-//template class RunEncoderBitVector<24, 1024>;
+template class RunEncoderSDArray<16, 256, 512>;
+template class RunEncoderSDArray<16, 512, 512>;
+template class RunEncoderSDArray<16, 1024, 512>;
+//template class RunEncoderSDArray<18, 1024>;
+//template class RunEncoderSDArray<20, 1024>;
+//template class RunEncoderSDArray<22, 1024>;
+//template class RunEncoderSDArray<24, 1024>;

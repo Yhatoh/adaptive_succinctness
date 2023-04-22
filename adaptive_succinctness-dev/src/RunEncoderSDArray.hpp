@@ -1,5 +1,5 @@
-#ifndef _RUNENCODER_HPP_
-#define _RUNENCODER_HPP_
+#ifndef _RUNENCODERSDARRAY_HPP_
+#define _RUNENCODERSDARRAY_HPP_
 
 #include <sdsl/bit_vectors.hpp>
 
@@ -11,7 +11,7 @@
 #include "../util/huffman_coder.hpp"
 
 template< uint16_t w, uint64_t bs, uint64_t br >
-class RunEncoderBitVector {
+class RunEncoderSDArray {
 public:
   //tunstall_coder<w> tc_r0;
   // r0 encoding
@@ -21,19 +21,19 @@ public:
   tunstall_coder<w> tc_r1_top_k;
   huffman_coder huffman_r1;
 
-  sdsl::bit_vector tc_or_huffman_r0;
-  sdsl::rank_support_v5<1> rank_tchuff_r0;
+  sdsl::sd_vector<> tc_or_huffman_r0;
+  sdsl::rank_support_sd<1> rank_tchuff_r0;
 
-  sdsl::bit_vector tc_or_huffman_r1;
-  sdsl::rank_support_v5<1> rank_tchuff_r1;
+  sdsl::sd_vector<> tc_or_huffman_r1;
+  sdsl::rank_support_sd<1> rank_tchuff_r1;
 
-  sdsl::bit_vector block_r1;
-  sdsl::select_support_mcl<1> select_block_r1;
-  sdsl::rank_support_v5<1> rank_block_r1;
+  sdsl::sd_vector<> block_r1;
+  sdsl::select_support_sd<1> select_block_r1;
+  sdsl::rank_support_sd<1> rank_block_r1;
 
-  sdsl::bit_vector block_r0;
-  sdsl::select_support_mcl<1> select_block_r0;
-  sdsl::rank_support_v5<1> rank_block_r0;
+  sdsl::sd_vector<> block_r0;
+  sdsl::select_support_sd<1> select_block_r0;
+  sdsl::rank_support_sd<1> rank_block_r0;
 
   uint64_t u; // universe
   uint64_t n; // ones
@@ -42,8 +42,8 @@ public:
   uint64_t top_most_freq;
   uint64_t symbol_tc_p;
 
-  RunEncoderBitVector(sdsl::bit_vector &bv, uint64_t top_k);
-  RunEncoderBitVector(std::vector<uint64_t> &pb, uint64_t top_k);
+  RunEncoderSDArray(sdsl::bit_vector &bv, uint64_t top_k);
+  RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_t top_k);
   uint64_t bits_tunstall_seq();
   uint64_t size_block_r1();
   uint64_t size_block_r0();
