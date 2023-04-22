@@ -7,8 +7,8 @@
 #include <vector>
 #include <iostream>
 
-#include "tunstallCoder.hpp"
-#include "huffman_coder.hpp"
+#include "../util/tunstallCoder.hpp"
+#include "../util/huffman_coder.hpp"
 
 template< uint16_t w, uint64_t bs, uint64_t br >
 class RunEncoder {
@@ -35,8 +35,6 @@ public:
   sdsl::select_support_mcl<1> select_block_r0;
   sdsl::rank_support_v5<1> rank_block_r0;
 
-  //tunstall_coder<w> tc_r1;
-  //tunstall_coder<w> tc;
   uint64_t u; // universe
   uint64_t n; // ones
   uint64_t n_r0; // ones
@@ -47,8 +45,6 @@ public:
   RunEncoder(sdsl::bit_vector &bv, uint64_t top_k);
   RunEncoder(std::vector<uint64_t> &pb, uint64_t top_k);
   uint64_t bits_tunstall_seq();
-  //uint64_t bits_idx();
-  //uint64_t bits_l2();
   uint64_t size_block_r1();
   uint64_t size_block_r0();
   uint64_t select(uint64_t k);

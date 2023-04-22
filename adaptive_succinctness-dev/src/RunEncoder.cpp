@@ -256,7 +256,6 @@ uint64_t RunEncoder<w,bs,br>::select(uint64_t k) {
 
   uint64_t block = rank_block_r1(k);
 
-  //std::cerr << "BLOCK: " << block << std::endl;
   uint64_t pos = 0;
   bool take_gr0 = true;
 
@@ -297,24 +296,30 @@ uint64_t RunEncoder<w,bs,br>::select(uint64_t k) {
 
   while(ones < k) {
     if(take_gr0) {
+      // read from gap of run 0
       uint64_t act_zeros = 0;
       if(tc_or_huffman_r0[gap_pos]) {
+        // is in tunstall
         if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
         else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
         gap_tc_r0++;
       } else {
+        // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
         else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
         gap_huff_r0++;
       }
       pos += act_zeros;
     } else {
+      // read from gap of run 1
       uint64_t act_ones = 0;
       if(tc_or_huffman_r1[gap_pos]) {
+        // is in tunstall
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
         gap_tc_r1++;
       } else {
+        // is in huffman
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;

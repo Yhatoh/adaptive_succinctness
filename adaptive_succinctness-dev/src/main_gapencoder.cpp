@@ -8,8 +8,7 @@
 #include <vector>
 #include <string>
 
-#include "utils.hpp"
-#include "GapEncoder.hpp"
+#include "../util/utils.hpp"
 #include "RunEncoder.hpp"
 
 int main(int argc, char **argv) {
