@@ -26,6 +26,7 @@ public:
 
   sdsl::bit_vector tc_or_huffman_r1;
   sdsl::rank_support_v5<1> rank_tchuff_r1;
+  sdsl::select_support_mcl<1> select_tchuff_r1;
 
   sdsl::bit_vector block_r1;
   sdsl::select_support_mcl<1> select_block_r1;

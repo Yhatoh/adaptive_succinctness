@@ -287,7 +287,7 @@ uint64_t RunEncoderBitVector<w,bs,br>::select(uint64_t k) {
     gap_tc_r0 = rank_tchuff_r0(gap_pos);
     gap_huff_r0 = gap_pos - gap_tc_r0;
     gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    gap_huff_r1 = gap_pos  - gap_tc_r1;
+    gap_huff_r1 = gap_pos - gap_tc_r1;
 
     // pos before block
     pos += zeros;
@@ -339,9 +339,109 @@ uint64_t RunEncoderBitVector<w,bs,br>::select(uint64_t k) {
 
 template< uint16_t w, uint64_t bs, uint64_t br >
 uint64_t RunEncoderBitVector<w,bs,br>::rank(uint64_t i) {
+  i++;
+  if(i >= u) return n;
+  uint64_t l = 1;
+  uint64_t r = rank_block_r1(block_r1.size());
+ 
+  uint64_t block = 0;
+  uint64_t _ones = 0;
+  uint64_t _zeros = 0;
+  uint64_t pos = 0;
 
+  // binary search, find block
+  while(l < r) {
+    uint64_t mid = (l + r) / 2;
+
+    uint64_t ones_mid = select_block_r1(mid);
+    uint64_t zeros_mid = select_block_r0(mid);
+    uint64_t pos_mid = ones_mid + zeros_mid;
+    if(pos_mid >= i) {
+      r = mid - 1;
+    } else {
+      block = mid;
+      _ones = ones_mid;
+      _zeros = zeros_mid;
+      pos = _ones + _zeros;
+      l = mid + 1;
+    }
+  }
+
+  // actual gap
+  uint64_t gap_pos = 0;
+
+  // current gap in tunstall R0
+  uint64_t gap_tc_r0 = 0;
+  // current gap in huffman R0
+  uint64_t gap_huff_r0 = 0;
+  // current gap in tunstall R1
+  uint64_t gap_tc_r1 = 0;
+  // current gap in huffman R1
+  uint64_t gap_huff_r1 = 0;
+
+  bool take_gr0 = true;
+  if(block > 0 && pos < i) {
+    // curr gap pos
+    gap_pos = block * br;
+
+    // actual gaps in each structure
+    gap_tc_r0 = rank_tchuff_r0(gap_pos);
+    gap_huff_r0 = gap_pos - gap_tc_r0;
+    gap_tc_r1 = rank_tchuff_r1(gap_pos);
+    gap_huff_r1 = gap_pos - gap_tc_r1;
+  } else if(block == 1 && pos >= i) {
+    _ones = 0;
+    _zeros = 0;
+    pos = 0;
+  }
+
+  while(pos <= i) {
+    if(take_gr0) {
+      // read from gap of run 0
+      uint64_t act_zeros = 0;
+      if(tc_or_huffman_r0[gap_pos]) {
+        // is in tunstall
+        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        gap_tc_r0++;
+      } else {
+        // is in huffman
+        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
+        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+        gap_huff_r0++;
+      }
+      pos += act_zeros;
+    } else {
+      // read from gap of run 1
+      uint64_t act_ones = 0;
+      if(tc_or_huffman_r1[gap_pos]) {
+        // is in tunstall
+        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        gap_tc_r1++;
+      } else {
+        // is in huffman
+        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
+        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        gap_huff_r1++;
+      }
+      pos += act_ones;
+      _ones += act_ones;
+      gap_pos++;
+      if(pos >= i) {
+        _ones -= act_ones;
+        pos -= act_ones;
+        uint64_t to_sum = i - pos;
+        pos = i + 1;
+        _ones += to_sum;
+      }
+    }
+    take_gr0 = !take_gr0;
+  }
+  return _ones;
 }
 
+template class RunEncoderBitVector<16, 1024, 3>;
 template class RunEncoderBitVector<16, 256, 512>;
 template class RunEncoderBitVector<16, 512, 512>;
 template class RunEncoderBitVector<16, 1024, 512>;

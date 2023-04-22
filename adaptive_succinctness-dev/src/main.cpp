@@ -42,12 +42,14 @@ int main(int argc, char **argv) {
 
   //std::vector< uint64_t > seq = {2,3,4,7,8,9,13,14,19,20,21,25,26,27,30,31,36,37,38,41,42,45,49,50,51,55,56,59,60};
   sdsl::select_support_mcl<1> select(&bv);
+  sdsl::rank_support_v5<1> rank(&bv);
   std::vector< uint64_t > ks = {4};//, 8, 16, 32, 64};
   for(uint64_t k : ks) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
     RunEncoderBitVector<16, 1024, 512> ge_16(seq, k);
-    std::cout << seq.size() << "\n";
+    //RunEncoderBitVector<16, 1024, 3> ge_16(seq, k);
+    std::cout << "SELECT OP" << std::endl;
     for(uint64_t i = 1; i <= seq.size(); i++) {
       if(ge_16.select(i) != select(i)) {
         std::cout << "Query " << i << std::endl;
@@ -55,6 +57,16 @@ int main(int argc, char **argv) {
         std::cout << ge_16.select(i) << std::endl;
         std::cout << "SELECT REAL" << std::endl;
         std::cout << select(i) << std::endl;
+      }
+    }
+    std::cout << "RANK OP" << std::endl;
+    for(uint64_t i = 0; i <= seq[seq.size() - 1]; i++) {
+      if(ge_16.rank(i) != rank(i)) {
+        std::cout << "Query " << i << std::endl;
+        std::cout << "RANK RUNENCODER" << std::endl;
+        std::cout << ge_16.rank(i) << std::endl;
+        std::cout << "rank REAL" << std::endl;
+        std::cout << rank(i) << std::endl;
         break;
       }
     }
