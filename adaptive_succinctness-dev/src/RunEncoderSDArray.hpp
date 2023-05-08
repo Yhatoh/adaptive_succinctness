@@ -23,9 +23,11 @@ public:
 
   sdsl::sd_vector<> tc_or_huffman_r0;
   sdsl::rank_support_sd<1> rank_tchuff_r0;
+  sdsl::select_support_sd<1> select_tchuff_r0;
 
   sdsl::sd_vector<> tc_or_huffman_r1;
   sdsl::rank_support_sd<1> rank_tchuff_r1;
+  sdsl::select_support_sd<1> select_tchuff_r1;
 
   sdsl::sd_vector<> block_r1;
   sdsl::select_support_sd<1> select_block_r1;

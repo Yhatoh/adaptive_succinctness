@@ -1,5 +1,7 @@
 #include "RunEncoderSDArray.hpp"
 
+#define debug(x) std::cout << #x << ": " << x << std::endl
+
 template< uint16_t w, uint64_t bs, uint64_t br>
 RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(sdsl::bit_vector &bv, uint64_t top_k) {
 
@@ -138,6 +140,8 @@ RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_
 
   sdsl::util::init_support(rank_tchuff_r0, &tc_or_huffman_r0);
   sdsl::util::init_support(rank_tchuff_r1, &tc_or_huffman_r1);
+  sdsl::util::init_support(select_tchuff_r0, &tc_or_huffman_r0);
+  sdsl::util::init_support(select_tchuff_r1, &tc_or_huffman_r1);
 
   std::cerr << "Done..." << std::endl;
 }
@@ -270,6 +274,11 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
   // actual gap
   uint64_t gap_pos = 0;
 
+  // ith one R0
+  uint64_t one_r0 = 1;
+  // ith one R1
+  uint64_t one_r1 = 1;
+
   // current gap in tunstall R0
   uint64_t gap_tc_r0 = 0;
   // current gap in huffman R0
@@ -289,8 +298,11 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
 
     // actual gaps in each structure
     gap_tc_r0 = rank_tchuff_r0(gap_pos);
+    one_r0 = gap_tc_r0;
+
     gap_huff_r0 = gap_pos - gap_tc_r0;
     gap_tc_r1 = rank_tchuff_r1(gap_pos);
+    one_r1 = gap_tc_r1++;
     gap_huff_r1 = gap_pos  - gap_tc_r1;
 
     // pos before block
@@ -298,7 +310,142 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
     pos += ones;
   }
 
+  uint64_t prev_one_r0 = 0;
+  bool flag_acum_r0 = false;
+  uint64_t prev_one_r1 = 0;
+  bool flag_acum_r1 = false;
+
+  uint64_t res_select_r1 = select_tchuff_r1(one_r1);
+  //std::cout << "BEFORE WHILE" << std::endl;
+  //debug(one_r1);
+  //debug(gap_pos);
+  //debug(res_select_r1);
+  if(one_r1 > 1) {
+    prev_one_r1 = res_select_r1;
+    if(res_select_r1 > gap_pos) {
+      prev_one_r1 = gap_pos;
+      flag_acum_r0 = true;
+    }
+  }
+  //debug(prev_one_r1);
+  //std::cout << "IN WHILE" << std::endl;
   while(ones < k) {
+    if(take_gr0) {
+      // read from gap of run 0
+      uint64_t act_zeros = 0;
+      if(tc_or_huffman_r0[gap_pos]) {
+        // is in tunstall
+        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        gap_tc_r0++;
+      } else {
+        // is in huffman
+        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
+        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+        gap_huff_r0++;
+      }
+      pos += act_zeros;
+    } else {
+      // read from gap of run 1
+      uint64_t act_ones = 0;
+      //if(tc_or_huffman_r1[gap_pos]) {
+      if(!flag_acum_r1) res_select_r1 = select_tchuff_r1(one_r1);
+      //debug(tc_or_huffman_r1[gap_pos]);
+      //debug(res_select_r1);
+      //debug(one_r1);
+      //debug(prev_one_r1);
+      //debug(flag_acum_r1);
+      //std::cout << "CYCLE " << std::endl;
+      if(res_select_r1 <= prev_one_r1 + 1 && !flag_acum_r1) {
+        // is in tunstall
+        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        gap_tc_r1++;
+        one_r1++;
+        prev_one_r1 = res_select_r1;
+      } else {
+        flag_acum_r1 = true;
+        // is in huffman
+        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
+        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        gap_huff_r1++;
+        prev_one_r1++;
+        if(res_select_r1 <= prev_one_r1 + 1) {
+          flag_acum_r1 = false;
+        }
+      }
+      pos += act_ones;
+      ones += act_ones;
+      gap_pos++;
+    }
+    take_gr0 = !take_gr0;
+  }
+  while(ones > k) {
+    pos--;
+    ones--;
+  }
+  return pos - 2;
+}
+
+template< uint16_t w, uint64_t bs, uint64_t br >
+uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
+  i++;
+  if(i >= u) return n;
+  uint64_t l = 1;
+  uint64_t r = rank_block_r1(block_r1.size());
+ 
+  uint64_t block = 0;
+  uint64_t _ones = 0;
+  uint64_t _zeros = 0;
+  uint64_t pos = 0;
+
+  // binary search, find block
+  while(l < r) {
+    uint64_t mid = (l + r) / 2;
+
+    uint64_t ones_mid = select_block_r1(mid);
+    uint64_t zeros_mid = select_block_r0(mid);
+    uint64_t pos_mid = ones_mid + zeros_mid;
+    if(pos_mid >= i) {
+      r = mid - 1;
+    } else {
+      block = mid;
+      _ones = ones_mid;
+      _zeros = zeros_mid;
+      pos = _ones + _zeros;
+      l = mid + 1;
+    }
+  }
+
+  // actual gap
+  uint64_t gap_pos = 0;
+
+  // current gap in tunstall R0
+  uint64_t gap_tc_r0 = 0;
+  // current gap in huffman R0
+  uint64_t gap_huff_r0 = 0;
+  // current gap in tunstall R1
+  uint64_t gap_tc_r1 = 0;
+  // current gap in huffman R1
+  uint64_t gap_huff_r1 = 0;
+
+  bool take_gr0 = true;
+  if(block > 0 && pos < i) {
+    // curr gap pos
+    gap_pos = block * br;
+
+    // actual gaps in each structure
+    gap_tc_r0 = rank_tchuff_r0(gap_pos);
+    gap_huff_r0 = gap_pos - gap_tc_r0;
+    gap_tc_r1 = rank_tchuff_r1(gap_pos);
+    gap_huff_r1 = gap_pos - gap_tc_r1;
+  } else if(block == 1 && pos >= i) {
+    _ones = 0;
+    _zeros = 0;
+    pos = 0;
+  }
+
+  while(pos <= i) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
@@ -329,21 +476,19 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
         gap_huff_r1++;
       }
       pos += act_ones;
-      ones += act_ones;
+      _ones += act_ones;
       gap_pos++;
+      if(pos >= i) {
+        _ones -= act_ones;
+        pos -= act_ones;
+        uint64_t to_sum = i - pos;
+        pos = i + 1;
+        _ones += to_sum;
+      }
     }
     take_gr0 = !take_gr0;
   }
-  while(ones > k) {
-    pos--;
-    ones--;
-  }
-  return pos - 2;
-}
-
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
-
+  return _ones;
 }
 
 template class RunEncoderSDArray<16, 256, 512>;

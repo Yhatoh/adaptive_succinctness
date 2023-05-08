@@ -4,22 +4,28 @@
 #include <iostream> 
 #include <queue> 
 #include <vector>
-#include <algorithm>                                                                                                          
+#include <algorithm> 
 #include <utility>       
 #include <map>
 #include <cmath>
 #include <inttypes.h>
+#include <fstream>
+#include <string>
+#include <tuple>
 
 #include <sdsl/vectors.hpp>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/coder_elias_delta.hpp>
+#include <sdsl/suffix_arrays.hpp>
 
 #include "block_element.hpp"
 
 
 typedef std::pair<float, uint64_t>   heap_node; 
+typedef std::tuple<uint64_t, uint64_t, std::string>   heap_node_str; 
 
 typedef std::pair<uint64_t, int64_t> tree_node;
+typedef std::tuple<uint64_t, int64_t, std::string> tree_node_str;
 
 template< uint16_t w >
 class tunstall_coder {
@@ -36,6 +42,8 @@ class tunstall_coder {
     uint64_t D_size;
     
     void traverse(std::vector<tree_node>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
+                  std::vector<uint64_t>& currcode); 
+    void traverse(std::vector<tree_node_str>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
                   std::vector<uint64_t>& currcode); 
 
     

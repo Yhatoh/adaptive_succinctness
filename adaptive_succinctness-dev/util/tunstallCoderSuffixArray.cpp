@@ -2,16 +2,31 @@
 
 using namespace std;
 
+#define FILENAME "tunstall_seq.txt"
+
+void seq_to_file(vector< uint32_t > &seq) {
+  ofstream file;
+  file.open(FILENAME);
+  uint64_t i;
+  for(i = 0; i + 1 < seq.size(); i++) {
+    file << seq[i] << " ";
+  }
+
+  file << seq[i];
+  file.close();
+}
+  
+
 template< uint16_t w >
-void tunstall_coder<w>::traverse(vector<tree_node>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
+void tunstall_coder<w>::traverse(vector<tree_node_str>& tree, uint64_t curnode, uint64_t& curindex, uint64_t sigma,
               vector<uint64_t>& currcode) {
     uint64_t i, cursum;
 
     for (i = 0; i < sigma; ++i, ++curnode) {
         currcode.push_back(i);
 
-        if (tree[curnode].second == -1) {
-            tree[curnode].first = curindex;  // dictionary index of this code
+        if (get<1>(tree[curnode]) == -1) {
+            get<0>(tree[curnode]) = curindex;  // dictionary index of this code
             cursum = 0;
             for (uint64_t j = 0; j < currcode.size(); ++j) {
                  cursum += map_table[currcode[j]];
@@ -19,14 +34,14 @@ void tunstall_coder<w>::traverse(vector<tree_node>& tree, uint64_t curnode, uint
             }
             curindex++;
         } else {
-            tree[curnode].first = curindex;
+            get<0>(tree[curnode]) = curindex;
             cursum = 0;
             for (uint64_t j = 0; j < currcode.size(); ++j) {
                 cursum += map_table[currcode[j]];
                 D[curindex].push_back(cursum);
             }
             curindex++;
-            traverse(tree, tree[curnode].second, curindex, sigma, currcode);  // goes to children of curnode
+            traverse(tree, get<1>(tree[curnode]), curindex, sigma, currcode);  // goes to children of curnode
         }
         currcode.pop_back();
     }
@@ -43,6 +58,9 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
     D_size = 1 << w;
 
     bSize = block_size;
+
+    //std::cout << "Create string of seq..." << endl;
+    seq_to_file(seq);
 
     //std::cout << "Create alphabet..." << endl;
     map<uint32_t, uint32_t> alphabet_map;
@@ -72,17 +90,21 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
         if (freq_table[i] < Pmin)
             Pmin = freq_table[i];
 
-    //std::cout << "Heap..." << endl;
-    priority_queue<heap_node> H;
+    //std::cout << "Suffix array creation..." << endl;
+    sdsl::csa_wt<sdsl::wt_huff<sdsl::rrr_vector<63>>, 4, 8> csa;
+    construct(csa, FILENAME, 1);
 
-    vector<tree_node> tree(sigma);
+    //std::cout << "Heap..." << endl;
+    priority_queue<heap_node_str> H;
+
+    vector<tree_node_str> tree(sigma);
 
     // tree initially contains sigma elements,
     // and they have no children in the tree (indicated with -1)
 
     for (i = 0; i < sigma; ++i) {
-        tree[i] = tree_node(0, -1);
-        H.push(heap_node((float)freq_table[i] / seq.size(), i));
+        tree[i] = tree_node_str(0, -1, to_string(map_table[i]));
+        H.push(heap_node_str(sdsl::count(csa, to_string(map_table[i])), i, to_string(map_table[i])));
     }
 
     // now, tree nodes are expanded according to their probabilities
@@ -91,15 +113,20 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
     float probMinLeaf = (float)Pmin / freq_table.size();
     uint dictionary_size = sigma;
     while (dictionary_size + sigma <= D_size) {
-        heap_node N = H.top();
+        uint64_t count_res;
+        int64_t pos;
+        string seq_str;
+        std::tie(count_res, pos, seq_str) = H.top();
         H.pop();
-        tree[N.second].second = tree.size();  // pointer to the children
+        get<1>(tree[pos]) = tree.size();  // pointer to the children
 
         for (i = 0; i < sigma; ++i) {
-            pair<float, uint64_t> p(N.first * ((float)freq_table[i] / seq.size()), tree.size());
-            H.push(p);
+            //pair<float, uint64_t> p(N.first * ((float)freq_table[i] / seq.size()), tree.size());
+            
+            string child_seq = seq_str + " " + to_string(map_table[i]);
+            H.push(heap_node_str(sdsl::count(csa, child_seq), tree.size(), child_seq));
 
-            tree.push_back(tree_node(0, -1));
+            tree.push_back(tree_node_str(0, -1, child_seq));
         }
         dictionary_size = dictionary_size + sigma;
     }
@@ -129,9 +156,9 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
     for (i = 0; i < seq.size(); ++i) {
         prefix_sum += seq[i];
         nelems_block++;
-        if (tree[curnode + alphabet_map[seq[i]]].second != -1) {
+        if (get<1>(tree[curnode + alphabet_map[seq[i]]]) != -1) {
             if (nelems_block == block_size) {
-                compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[i]]].first);
+                compressed_seq_aux.push_back(get<0>(tree[curnode + alphabet_map[seq[i]]]));
                 bElem.prefix_sum = prefix_sum;
                 bElem.starting_position = compressed_seq_aux.size();
                 block.push_back(bElem);
@@ -139,9 +166,9 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
                 curnode = 0;
                 nelems_block = 0;
             } else
-                curnode = tree[curnode + alphabet_map[seq[i]]].second;
+                curnode = get<1>(tree[curnode + alphabet_map[seq[i]]]);
         } else {
-            compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[i]]].first);
+            compressed_seq_aux.push_back(get<0>(tree[curnode + alphabet_map[seq[i]]]));
             curnode = 0;  // go back to the Tunstall tree root again
             if (nelems_block == block_size) {
                 bElem.prefix_sum = prefix_sum;
@@ -153,7 +180,7 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
     }
 
     if (nelems_block > 0)
-        compressed_seq_aux.push_back(tree[curnode + alphabet_map[seq[seq.size() - 1]]].first);
+        compressed_seq_aux.push_back(get<0>(tree[curnode + alphabet_map[seq[seq.size() - 1]]]));
 
     //std::cout << "Copying to a compressed_seq int_vector..." << "\n";
     compressed_seq = sdsl::int_vector<w>(compressed_seq_aux.size());
