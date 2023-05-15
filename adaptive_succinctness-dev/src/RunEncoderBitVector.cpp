@@ -330,10 +330,11 @@ uint64_t RunEncoderBitVector<w,bs,br>::select(uint64_t k) {
     }
     take_gr0 = !take_gr0;
   }
-  while(ones > k) {
-    pos--;
-    ones--;
+  
+  if(ones > k) {
+    pos -= ones - k;
   }
+
   return pos - 2;
 }
 

@@ -298,81 +298,88 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
 
     // actual gaps in each structure
     gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    one_r0 = gap_tc_r0;
-
     gap_huff_r0 = gap_pos - gap_tc_r0;
+    one_r0 = gap_tc_r0; // are the same value in this point
+
     gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    one_r1 = gap_tc_r1++;
-    gap_huff_r1 = gap_pos  - gap_tc_r1;
+    gap_huff_r1 = gap_pos - gap_tc_r1;
+    one_r1 = gap_tc_r1; // are the same value in this point
 
     // pos before block
     pos += zeros;
     pos += ones;
   }
 
-  uint64_t prev_one_r0 = 0;
   bool flag_acum_r0 = false;
-  uint64_t prev_one_r1 = 0;
   bool flag_acum_r1 = false;
+  uint64_t prev_r1 = -1;
+  uint64_t res_select_r1 = -1;
+  uint64_t prev_r0 = -1;
+  uint64_t res_select_r0 = -1;
 
-  uint64_t res_select_r1 = select_tchuff_r1(one_r1);
-  //std::cout << "BEFORE WHILE" << std::endl;
-  //debug(one_r1);
-  //debug(gap_pos);
-  //debug(res_select_r1);
-  if(one_r1 > 1) {
-    prev_one_r1 = res_select_r1;
-    if(res_select_r1 > gap_pos) {
-      prev_one_r1 = gap_pos;
-      flag_acum_r0 = true;
+  if(block > 0) {
+    prev_r1 = select_tchuff_r1(one_r1);
+    res_select_r1 = select_tchuff_r1(one_r1 + 1);
+    if(prev_r1 + 1 != res_select_r1) {
+      flag_acum_r1 = true;
+      prev_r1 = gap_pos - 1;
     }
+    one_r1++;
+
+    prev_r0 = select_tchuff_r0(one_r0);
+    res_select_r0 = select_tchuff_r0(one_r0 + 1);
+    if(prev_r0 + 1 != res_select_r0) {
+      flag_acum_r0 = true;
+      prev_r0 = gap_pos - 1;
+    }
+    one_r0++;
   }
-  //debug(prev_one_r1);
-  //std::cout << "IN WHILE" << std::endl;
+
   while(ones < k) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      if(tc_or_huffman_r0[gap_pos]) {
+      if(!flag_acum_r0) res_select_r0 = select_tchuff_r0(one_r0);
+
+      if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
         // is in tunstall
         if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
         else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
         gap_tc_r0++;
+        one_r0++;
+        prev_r0 = res_select_r0;
       } else {
+        flag_acum_r0 = true;
         // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
         else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
         gap_huff_r0++;
+        prev_r0++;
+        if(prev_r0 + 1 == res_select_r0)
+          flag_acum_r0 = false;
       }
       pos += act_zeros;
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      //if(tc_or_huffman_r1[gap_pos]) {
       if(!flag_acum_r1) res_select_r1 = select_tchuff_r1(one_r1);
-      //debug(tc_or_huffman_r1[gap_pos]);
-      //debug(res_select_r1);
-      //debug(one_r1);
-      //debug(prev_one_r1);
-      //debug(flag_acum_r1);
-      //std::cout << "CYCLE " << std::endl;
-      if(res_select_r1 <= prev_one_r1 + 1 && !flag_acum_r1) {
+
+      if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
         // is in tunstall
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
         gap_tc_r1++;
         one_r1++;
-        prev_one_r1 = res_select_r1;
+        prev_r1 = res_select_r1;
       } else {
-        flag_acum_r1 = true;
         // is in huffman
+        flag_acum_r1 = true;
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;
-        prev_one_r1++;
-        if(res_select_r1 <= prev_one_r1 + 1) {
+        prev_r1++;
+        if(prev_r1 + 1 == res_select_r1)
           flag_acum_r1 = false;
-        }
       }
       pos += act_ones;
       ones += act_ones;
@@ -380,11 +387,13 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
     }
     take_gr0 = !take_gr0;
   }
-  while(ones > k) {
-    pos--;
-    ones--;
+
+  if(ones > k) {
+    pos -= ones - k;
   }
+
   return pos - 2;
+
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br >
@@ -420,6 +429,11 @@ uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
   // actual gap
   uint64_t gap_pos = 0;
 
+  // ith one R0
+  uint64_t one_r0 = 1;
+  // ith one R1
+  uint64_t one_r1 = 1;
+
   // current gap in tunstall R0
   uint64_t gap_tc_r0 = 0;
   // current gap in huffman R0
@@ -437,44 +451,90 @@ uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
     // actual gaps in each structure
     gap_tc_r0 = rank_tchuff_r0(gap_pos);
     gap_huff_r0 = gap_pos - gap_tc_r0;
+    one_r0 = gap_tc_r0;
+
     gap_tc_r1 = rank_tchuff_r1(gap_pos);
     gap_huff_r1 = gap_pos - gap_tc_r1;
+    one_r1 = gap_tc_r1;
   } else if(block == 1 && pos >= i) {
     _ones = 0;
     _zeros = 0;
     pos = 0;
   }
 
+  bool flag_acum_r0 = false;
+  bool flag_acum_r1 = false;
+  uint64_t prev_r1 = -1;
+  uint64_t res_select_r1 = -1;
+  uint64_t prev_r0 = -1;
+  uint64_t res_select_r0 = -1;
+
+  if(block > 0 && pos < i) {
+    prev_r1 = select_tchuff_r1(one_r1);
+    res_select_r1 = select_tchuff_r1(one_r1 + 1);
+    if(prev_r1 + 1 != res_select_r1) {
+      flag_acum_r1 = true;
+      prev_r1 = gap_pos - 1;
+    }
+    one_r1++;
+
+    prev_r0 = select_tchuff_r0(one_r0);
+    res_select_r0 = select_tchuff_r0(one_r0 + 1);
+    if(prev_r0 + 1 != res_select_r0) {
+      flag_acum_r0 = true;
+      prev_r0 = gap_pos - 1;
+    }
+    one_r0++;
+  }
+
   while(pos <= i) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      if(tc_or_huffman_r0[gap_pos]) {
+      //if(tc_or_huffman_r0[gap_pos]) 
+      if(!flag_acum_r0) res_select_r0 = select_tchuff_r0(one_r0);
+
+      if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
         // is in tunstall
         if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
         else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
         gap_tc_r0++;
+        one_r0++;
+        prev_r0 = res_select_r0;
       } else {
+        flag_acum_r0 = true;
         // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
         else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
         gap_huff_r0++;
+        prev_r0++;
+        if(prev_r0 + 1 == res_select_r0)
+          flag_acum_r0 = false;
       }
       pos += act_zeros;
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      if(tc_or_huffman_r1[gap_pos]) {
+      if(!flag_acum_r1) res_select_r1 = select_tchuff_r1(one_r1);
+
+      if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
         // is in tunstall
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
         gap_tc_r1++;
+        one_r1++;
+        prev_r1 = res_select_r1;
       } else {
+        flag_acum_r1 = true;
         // is in huffman
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;
+        prev_r1++;
+        if(prev_r1 + 1 == res_select_r1)
+          flag_acum_r1 = false;
       }
+
       pos += act_ones;
       _ones += act_ones;
       gap_pos++;
@@ -488,6 +548,7 @@ uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
     }
     take_gr0 = !take_gr0;
   }
+
   return _ones;
 }
 
