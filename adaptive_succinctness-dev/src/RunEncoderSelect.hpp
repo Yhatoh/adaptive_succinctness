@@ -10,7 +10,7 @@
 #include "../util/tunstallCoder.hpp"
 #include "../util/huffman_coder.hpp"
 
-template< uint16_t w, uint64_t bs, uint64_t br >
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 class RunEncoderSDArray {
 public:
   //tunstall_coder<w> tc_r0;
@@ -21,21 +21,21 @@ public:
   tunstall_coder<w> tc_r1_top_k;
   huffman_coder huffman_r1;
 
-  sdsl::sd_vector<> tc_or_huffman_r0;
-  sdsl::rank_support_sd<1> rank_tchuff_r0;
-  sdsl::select_support_sd<1> select_tchuff_r0;
+  _bv tc_or_huffman_r0;
+  _rank rank_tchuff_r0;
+  _select select_tchuff_r0;
 
-  sdsl::sd_vector<> tc_or_huffman_r1;
-  sdsl::rank_support_sd<1> rank_tchuff_r1;
-  sdsl::select_support_sd<1> select_tchuff_r1;
+  _bv tc_or_huffman_r1;
+  _rank rank_tchuff_r1;
+  _select select_tchuff_r1;
 
-  sdsl::sd_vector<> block_r1;
-  sdsl::select_support_sd<1> select_block_r1;
-  sdsl::rank_support_sd<1> rank_block_r1;
+  _bv block_r1;
+  _select select_block_r1;
+  _rank rank_block_r1;
 
-  sdsl::sd_vector<> block_r0;
-  sdsl::select_support_sd<1> select_block_r0;
-  sdsl::rank_support_sd<1> rank_block_r0;
+  _bv block_r0;
+  _select select_block_r0;
+  _rank rank_block_r0;
 
   uint64_t u; // universe
   uint64_t n; // ones

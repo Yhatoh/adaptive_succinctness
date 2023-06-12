@@ -187,9 +187,9 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   //std::cerr << "Filling bitvector..." << std::endl;
 
   if(type) {
-    tc_or_huffman_r1 = sdsl::bit_vector(seq.size(), 0);
+    tc_or_huffman_r1 = _bv(seq.size(), 0);
   } else {
-    tc_or_huffman_r0 = sdsl::bit_vector(seq.size(), 0);
+    tc_or_huffman_r0 = _bv(seq.size(), 0);
   }
 
   std::vector< uint32_t > tc_seq;

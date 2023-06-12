@@ -2,13 +2,13 @@
 
 #define debug(x) std::cout << #x << ": " << x << std::endl
 
-template< uint16_t w, uint64_t bs, uint64_t br>
-RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(sdsl::bit_vector &bv, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k) {
 
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k) {
   top_most_freq = top_k;
   std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
 
@@ -94,7 +94,7 @@ RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_
   //for(uint64_t j = 0; j < br_R0.size(); j++) {
   //  block_r0[br_R0[j]] = 1;
   //}
-  block_r0 = sdsl::sd_vector<>(br_R0.begin(), br_R0.end());
+  block_r0 = _bv(br_R0.begin(), br_R0.end());
 
   br_R0.clear();
   PB_R0.clear();
@@ -123,7 +123,7 @@ RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_
   //  block_r1[j] = 1;
   //}
   
-  block_r1 = sdsl::sd_vector<>(br_R1.begin(), br_R1.end());
+  block_r1 = _bv(br_R1.begin(), br_R1.end());
 
   br_R1.clear();
   PB_R1.clear();
@@ -146,8 +146,8 @@ RunEncoderSDArray<w,bs,br>::RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_
   std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
   uint64_t sum = 0;
   res[0] = pb[0] - 1;
   for(uint64_t i = 1; i < pb.size(); i++) {
@@ -158,8 +158,8 @@ uint64_t RunEncoderSDArray<w,bs,br>::get_runs(std::vector<uint64_t> &pb, std::ve
   return sum;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-void RunEncoderSDArray<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
   //std::cerr << "Creating frequency map..." << std::endl;
   std::map< uint32_t, uint64_t > freq_map;
   for(uint64_t i = 0; i < seq.size(); i++) {
@@ -203,9 +203,9 @@ void RunEncoderSDArray<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bo
   }
  
   if(type) {
-    tc_or_huffman_r1 = sdsl::sd_vector<>(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
+    tc_or_huffman_r1 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
   } else {
-    tc_or_huffman_r0 = sdsl::sd_vector<>(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
+    tc_or_huffman_r0 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
   }
 
   //std::cerr << "Done..." << std::endl;
@@ -226,8 +226,8 @@ void RunEncoderSDArray<w,bs,br>::top_k_encoding(std::vector< uint32_t > &seq, bo
   //std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::bits_tunstall_seq() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
   /*std::cout << "--- Gaps R0 ---" << std::endl;
   std::cout << "Dict size: " << tc_r0.dict_size() * 8 << " " << (double) tc_r0.dict_size() * 8 / n << std::endl;
   std::cout << "Compressed seq size: " << tc_r0.compressed_seq_size() * 8 << " " << (double) tc_r0.compressed_seq_size() * 8 / n << std::endl;
@@ -248,18 +248,18 @@ uint64_t RunEncoderSDArray<w,bs,br>::bits_tunstall_seq() {
          8 * size_block_r0() + 8 * size_block_r1();
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::size_block_r1() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r1() {
   return sdsl::size_in_bytes(block_r1) + sdsl::size_in_bytes(select_block_r1) + sdsl::size_in_bytes(rank_block_r1);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::size_block_r0() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r0() {
   return sdsl::size_in_bytes(block_r0) + sdsl::size_in_bytes(select_block_r0) + sdsl::size_in_bytes(rank_block_r0);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   assert(k <= n);
 
   uint64_t block = rank_block_r1(k);
@@ -396,8 +396,8 @@ uint64_t RunEncoderSDArray<w,bs,br>::select(uint64_t k) {
 
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   i++;
   if(i >= u) return n;
   uint64_t l = 1;
@@ -552,10 +552,10 @@ uint64_t RunEncoderSDArray<w,bs,br>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderSDArray<16, 256, 512>;
-template class RunEncoderSDArray<16, 512, 512>;
-template class RunEncoderSDArray<16, 1024, 512>;
-//template class RunEncoderSDArray<18, 1024>;
-//template class RunEncoderSDArray<20, 1024>;
-//template class RunEncoderSDArray<22, 1024>;
-//template class RunEncoderSDArray<24, 1024>;
+template class RunEncoderSelect<16, 256, 512>;
+template class RunEncoderSelect<16, 512, 512>;
+template class RunEncoderSelect<16, 1024, 512>;
+//template class RunEncoderSelect<18, 1024>;
+//template class RunEncoderSelect<20, 1024>;
+//template class RunEncoderSelect<22, 1024>;
+//template class RunEncoderSelect<24, 1024>;
