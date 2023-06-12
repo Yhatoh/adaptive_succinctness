@@ -10,8 +10,8 @@
 #include "../util/tunstallCoder.hpp"
 #include "../util/huffman_coder.hpp"
 
-template< uint16_t w, uint64_t bs, uint64_t br >
-class RunEncoderBitVector {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
+class RunEncoderAccess {
 public:
   //tunstall_coder<w> tc_r0;
   // r0 encoding
@@ -21,20 +21,19 @@ public:
   tunstall_coder<w> tc_r1_top_k;
   huffman_coder huffman_r1;
 
-  sdsl::bit_vector tc_or_huffman_r0;
-  sdsl::rank_support_v5<1> rank_tchuff_r0;
+  _bv tc_or_huffman_r0;
+  _rank rank_tchuff_r0;
 
-  sdsl::bit_vector tc_or_huffman_r1;
-  sdsl::rank_support_v5<1> rank_tchuff_r1;
-  sdsl::select_support_mcl<1> select_tchuff_r1;
+  _bv tc_or_huffman_r1;
+  _rank rank_tchuff_r1;
 
-  sdsl::bit_vector block_r1;
-  sdsl::select_support_mcl<1> select_block_r1;
-  sdsl::rank_support_v5<1> rank_block_r1;
+  _bv block_r1;
+  _select select_block_r1;
+  _rank rank_block_r1;
 
-  sdsl::bit_vector block_r0;
-  sdsl::select_support_mcl<1> select_block_r0;
-  sdsl::rank_support_v5<1> rank_block_r0;
+  _bv block_r0;
+  _select select_block_r0;
+  _rank rank_block_r0;
 
   uint64_t u; // universe
   uint64_t n; // ones
@@ -43,8 +42,8 @@ public:
   uint64_t top_most_freq;
   uint64_t symbol_tc_p;
 
-  RunEncoderBitVector(sdsl::bit_vector &bv, uint64_t top_k);
-  RunEncoderBitVector(std::vector<uint64_t> &pb, uint64_t top_k);
+  RunEncoderAccess(sdsl::bit_vector &bv, uint64_t top_k);
+  RunEncoderAccess(std::vector<uint64_t> &pb, uint64_t top_k);
   uint64_t bits_tunstall_seq();
   uint64_t size_block_r1();
   uint64_t size_block_r0();

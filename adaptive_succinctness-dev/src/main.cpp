@@ -9,21 +9,21 @@
 #include <string>
 
 #include "../util/utils.hpp"
-//#include "RunEncoderBitVector.hpp"
-#include "RunEncoderSDArray.hpp"
+#include "RunEncoderAccess.hpp"
+//#include "RunEncoderSelect.hpp"
 
 int main(int argc, char **argv) {
   /*
-  std::vector<uint64_t> seq;
-  std::ifstream rf(argv[1], std::ios::binary);
-  std::cerr << "Reading file..." << std::endl;
-  uint64_t reader = 0;
-  while(!rf.eof()) {
-    uint64_t one;
-    rf.read((char*) &one, sizeof(uint64_t));
-    seq.push_back(one);
-    reader++;
-    //if(reader >= 1000000) break;
+     std::vector<uint64_t> seq;
+     std::ifstream rf(argv[1], std::ios::binary);
+     std::cerr << "Reading file..." << std::endl;
+     uint64_t reader = 0;
+     while(!rf.eof()) {
+     uint64_t one;
+     rf.read((char*) &one, sizeof(uint64_t));
+     seq.push_back(one);
+     reader++;
+  //if(reader >= 1000000) break;
   }
   std::cerr << "Done reading file..." << std::endl;
   rf.close();
@@ -40,25 +40,24 @@ int main(int argc, char **argv) {
       count++;
     }
   }
+  
   /*bv.resize(61);
-  std::vector< uint64_t > seq = {2,3,4,7,8,9,13,14,19,20,21,25,26,27,30,31,36,37,38,41,42,45,49,50,51,55,56,59,60};
-  for(uint64_t i = 0; i < 61; i++) {
+    std::vector< uint64_t > seq = {2,3,4,7,8,9,13,14,19,20,21,25,26,27,30,31,36,37,38,41,42,45,49,50,51,55,56,59,60};
+    for(uint64_t i = 0; i < 61; i++) {
     bv[i] = 0;
-  }
+    }
 
-  for(uint64_t i = 0; i < seq.size(); i++) {
+    for(uint64_t i = 0; i < seq.size(); i++) {
     bv[seq[i]] = 1;
-  }
-  */
+    }
+    */
   sdsl::select_support_mcl<1> select(&bv);
   sdsl::rank_support_v5<1> rank(&bv);
-  std::vector< uint64_t > ks = {4};//, 8, 16, 32, 64};
+  std::vector< uint64_t > ks = {8, 16, 32, 64};
   for(uint64_t k : ks) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
-    RunEncoderSDArray<16, 1024, 512> ge_16(seq, k);
-    //RunEncoderBitVector<16, 1024, 512> ge_16(seq, k);
-    //RunEncoderBitVector<16, 1024, 3> ge_16(seq, k);
+    RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> ge_16(seq, k);
     std::cout << "SELECT OP" << std::endl;
     for(uint64_t i = 1; i <= seq.size(); i++) {
       if(ge_16.select(i) != select(i)) {
