@@ -11,7 +11,7 @@
 #include "../util/huffman_coder.hpp"
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-class RunEncoderSDArray {
+class RunEncoderSelect {
 public:
   //tunstall_coder<w> tc_r0;
   // r0 encoding
@@ -44,8 +44,8 @@ public:
   uint64_t top_most_freq;
   uint64_t symbol_tc_p;
 
-  RunEncoderSDArray(sdsl::bit_vector &bv, uint64_t top_k);
-  RunEncoderSDArray(std::vector<uint64_t> &pb, uint64_t top_k);
+  RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k);
+  RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k);
   uint64_t bits_tunstall_seq();
   uint64_t size_block_r1();
   uint64_t size_block_r0();

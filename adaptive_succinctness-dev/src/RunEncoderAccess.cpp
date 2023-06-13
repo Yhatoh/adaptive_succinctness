@@ -89,11 +89,13 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   if(PB_R0.size() % br != 0)
     br_R0.push_back(PB_R0[PB_R0.size() - 1]);
  
-  block_r0.resize(br_R0[br_R0.size() - 1] + 1);
-  sdsl::util::_set_zero_bits(block_r0);
+  sdsl::bit_vector block_r0_help(br_R0[br_R0.size() - 1] + 1);
+  sdsl::util::_set_zero_bits(block_r0_help);
   for(uint64_t j = 0; j < br_R0.size(); j++) {
-    block_r0[br_R0[j]] = 1;
+    block_r0_help[br_R0[j]] = 1;
   }
+
+  block_r0 = _bv(block_r0_help);
 
   br_R0.clear();
   PB_R0.clear();
@@ -116,11 +118,12 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   if(PB_R1.size() % br != 0)
     br_R1.push_back(PB_R1[PB_R1.size() - 1]);
  
-  block_r1.resize(br_R1[br_R1.size() - 1] + 1);
-  sdsl::util::_set_zero_bits(block_r1);
+  sdsl::bit_vector block_r1_help(br_R1[br_R1.size() - 1] + 1);
+  sdsl::util::_set_zero_bits(block_r1_help);
   for(auto j : br_R1) {
-    block_r1[j] = 1;
+    block_r1_help[j] = 1;
   }
+  block_r1 = _bv(block_r1_help);
   
   br_R1.clear();
   PB_R1.clear();
@@ -186,25 +189,28 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Filling bitvector..." << std::endl;
 
-  if(type) {
-    tc_or_huffman_r1 = _bv(seq.size(), 0);
-  } else {
-    tc_or_huffman_r0 = _bv(seq.size(), 0);
-  }
-
   std::vector< uint32_t > tc_seq;
   std::vector< uint32_t > hf_seq;
+
+  sdsl::bit_vector tc_or_huffman_help(seq.size(), 0);
 
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      if(type) tc_or_huffman_r1[i] = 1;
-      else tc_or_huffman_r0[i] = 1;
+      tc_or_huffman_help[i] = 1;
+      //if(type) tc_or_huffman_r1[i] = 1;
+      //else tc_or_huffman_r0[i] = 1;
     } else {
       hf_seq.push_back(seq[i]);
     }
   }
  
+  if(type) {
+    tc_or_huffman_r1 = _bv(tc_or_huffman_help);
+  } else {
+    tc_or_huffman_r0 = _bv(tc_or_huffman_help);
+  }
+
   //std::cerr << "Done..." << std::endl;
   //std::cerr << "Creating tunstall and huffman..." << std::endl;
   std::cerr << "Percentage of symbols in Tunstall sequence: " << (double)tc_seq.size() / seq.size() << std::endl;
@@ -450,9 +456,12 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+//template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+//template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+//template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
 //template class RunEncoderAccess<18, 1024>;
 //template class RunEncoderAccess<20, 1024>;
 //template class RunEncoderAccess<22, 1024>;

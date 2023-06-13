@@ -552,9 +552,9 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderSelect<16, 256, 512>;
-template class RunEncoderSelect<16, 512, 512>;
-template class RunEncoderSelect<16, 1024, 512>;
+template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 512, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 1024, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<18, 1024>;
 //template class RunEncoderSelect<20, 1024>;
 //template class RunEncoderSelect<22, 1024>;

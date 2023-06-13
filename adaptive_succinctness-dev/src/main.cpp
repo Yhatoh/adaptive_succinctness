@@ -57,7 +57,9 @@ int main(int argc, char **argv) {
   for(uint64_t k : ks) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
-    RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> ge_16(seq, k);
+    //RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> ge_16(seq, k);
+    RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> ge_16(seq, k);
+    //RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> ge_16(seq, k);
     std::cout << "SELECT OP" << std::endl;
     for(uint64_t i = 1; i <= seq.size(); i++) {
       if(ge_16.select(i) != select(i)) {
