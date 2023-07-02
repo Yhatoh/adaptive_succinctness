@@ -22,18 +22,22 @@ public:
   huffman_coder huffman_r1;
 
   _bv tc_or_huffman_r0;
+  uint64_t n_tchuff_r0;
   _rank rank_tchuff_r0;
   _select select_tchuff_r0;
 
   _bv tc_or_huffman_r1;
+  uint64_t n_tchuff_r1;
   _rank rank_tchuff_r1;
   _select select_tchuff_r1;
 
   _bv block_r1;
+  uint64_t n_block_r1;
   _select select_block_r1;
   _rank rank_block_r1;
 
   _bv block_r0;
+  uint64_t n_block_r0;
   _select select_block_r0;
   _rank rank_block_r0;
 

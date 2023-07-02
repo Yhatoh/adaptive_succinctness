@@ -197,10 +197,10 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      tc_or_huffman_help[i] = 1;
       //if(type) tc_or_huffman_r1[i] = 1;
       //else tc_or_huffman_r0[i] = 1;
     } else {
+      tc_or_huffman_help[i] = 1;
       hf_seq.push_back(seq[i]);
     }
   }
@@ -298,10 +298,10 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     gap_pos = block * br;
 
     // actual gaps in each structure
-    gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    gap_huff_r0 = gap_pos - gap_tc_r0;
-    gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    gap_huff_r1 = gap_pos - gap_tc_r1;
+    gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    gap_tc_r0 = gap_pos - gap_huff_r0;
+    gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    gap_tc_r1 = gap_pos - gap_huff_r1;
 
     // pos before block
     pos += zeros;
@@ -312,7 +312,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      if(tc_or_huffman_r0[gap_pos]) {
+      if(!tc_or_huffman_r0[gap_pos]) {
         // is in tunstall
         if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
         else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
@@ -327,7 +327,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      if(tc_or_huffman_r1[gap_pos]) {
+      if(!tc_or_huffman_r1[gap_pos]) {
         // is in tunstall
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
@@ -400,10 +400,10 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     gap_pos = block * br;
 
     // actual gaps in each structure
-    gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    gap_huff_r0 = gap_pos - gap_tc_r0;
-    gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    gap_huff_r1 = gap_pos - gap_tc_r1;
+    gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    gap_tc_r0 = gap_pos - gap_huff_r0;
+    gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    gap_tc_r1 = gap_pos - gap_huff_r1;
   } else if(block == 1 && pos >= i) {
     _ones = 0;
     _zeros = 0;
@@ -414,7 +414,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      if(tc_or_huffman_r0[gap_pos]) {
+      if(!tc_or_huffman_r0[gap_pos]) {
         // is in tunstall
         if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
         else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
@@ -429,7 +429,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      if(tc_or_huffman_r1[gap_pos]) {
+      if(!tc_or_huffman_r1[gap_pos]) {
         // is in tunstall
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
@@ -456,12 +456,12 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-//template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-//template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-//template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+//template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+//template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+//template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
 //template class RunEncoderAccess<18, 1024>;
 //template class RunEncoderAccess<20, 1024>;
 //template class RunEncoderAccess<22, 1024>;

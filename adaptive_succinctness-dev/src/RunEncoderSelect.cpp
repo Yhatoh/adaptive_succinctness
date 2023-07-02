@@ -96,6 +96,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   //}
   block_r0 = _bv(br_R0.begin(), br_R0.end());
 
+  n_block_r0 = br_R0.size();
   br_R0.clear();
   PB_R0.clear();
 
@@ -125,6 +126,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   
   block_r1 = _bv(br_R1.begin(), br_R1.end());
 
+  n_block_r1 = br_R1.size();
   br_R1.clear();
   PB_R1.clear();
 
@@ -196,15 +198,17 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      tc_or_huff_seq.push_back(i);
     } else {
+      tc_or_huff_seq.push_back(i);
       hf_seq.push_back(seq[i]);
     }
   }
  
   if(type) {
+    n_tchuff_r1 = tc_or_huff_seq.size();
     tc_or_huffman_r1 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
   } else {
+    n_tchuff_r0 = tc_or_huff_seq.size();
     tc_or_huffman_r0 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
   }
 
@@ -236,13 +240,17 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
   std::cout << "Dict size: " << tc_r1.dict_size() * 8 << " " << (double) tc_r1.dict_size() * 8 / n << std::endl;
   std::cout << "Compressed seq size: " << tc_r1.compressed_seq_size() * 8 << " " << (double) tc_r1.compressed_seq_size() * 8 / n << std::endl;
   std::cout << "Block size: " << tc_r1.block_vec_size() * 8 << " " << (double) tc_r1.block_vec_size() * 8 / n << std::endl;
-*/
   std::cout << "TC_R0: " << tc_r0_top_k.size() * 8 << std::endl;
   std::cout << "HF_R0: " << huffman_r0.size() * 8 << std::endl;
   std::cout << "TC_R1: " << tc_r1_top_k.size() * 8 << std::endl;
   std::cout << "HF_R1: " << huffman_r1.size() * 8 << std::endl;
+*/
   return 8 * sdsl::size_in_bytes(tc_or_huffman_r1) + 
+         8 * sdsl::size_in_bytes(rank_tchuff_r1) +
+         8 * sdsl::size_in_bytes(select_tchuff_r1) +
          8 * sdsl::size_in_bytes(tc_or_huffman_r0) +
+         8 * sdsl::size_in_bytes(rank_tchuff_r0) +
+         8 * sdsl::size_in_bytes(select_tchuff_r0) +
          8 * tc_r0_top_k.size() + 8 * tc_r1_top_k.size() +
          8 * huffman_r0.size() + 8 * huffman_r1.size() +
          8 * size_block_r0() + 8 * size_block_r1();
@@ -297,13 +305,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     gap_pos = block * br;
 
     // actual gaps in each structure
-    gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    gap_huff_r0 = gap_pos - gap_tc_r0;
-    one_r0 = gap_tc_r0; // are the same value in this point
+    if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    else gap_huff_r0 = n_tchuff_r0;
+    gap_tc_r0 = gap_pos - gap_huff_r0;
+    one_r0 = gap_huff_r0; // are the same value in this point
 
-    gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    gap_huff_r1 = gap_pos - gap_tc_r1;
-    one_r1 = gap_tc_r1; // are the same value in this point
+    if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    else gap_huff_r1 = n_tchuff_r1;
+    gap_tc_r1 = gap_pos - gap_huff_r1;
+    one_r1 = gap_huff_r1; // are the same value in this point
 
     // pos before block
     pos += zeros;
@@ -318,17 +328,29 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   uint64_t res_select_r0 = -1;
 
   if(block > 0) {
-    prev_r1 = select_tchuff_r1(one_r1);
-    res_select_r1 = select_tchuff_r1(one_r1 + 1);
-    if(prev_r1 + 1 != res_select_r1) {
+    if(one_r1 >= 1) {
+      prev_r1 = select_tchuff_r1(one_r1);
+      if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
+      if(one_r1 + 1 > n_tchuff_r1 || prev_r1 + 1 != res_select_r1) {
+        flag_acum_r1 = true;
+        prev_r1 = gap_pos - 1;
+      }
+    } else {
+      if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
       flag_acum_r1 = true;
       prev_r1 = gap_pos - 1;
     }
     one_r1++;
 
-    prev_r0 = select_tchuff_r0(one_r0);
-    res_select_r0 = select_tchuff_r0(one_r0 + 1);
-    if(prev_r0 + 1 != res_select_r0) {
+    if(one_r0 >= 1) {
+      prev_r0 = select_tchuff_r0(one_r0);
+      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
+      if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
+        flag_acum_r0 = true;
+        prev_r0 = gap_pos - 1;
+      }
+    } else {
+      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
       flag_acum_r0 = true;
       prev_r0 = gap_pos - 1;
     }
@@ -339,21 +361,22 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      if(!flag_acum_r0) res_select_r0 = select_tchuff_r0(one_r0);
+      if(!flag_acum_r0 && one_r0 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0);
+      else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
 
       if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
-        // is in tunstall
-        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
-        gap_tc_r0++;
-        one_r0++;
-        prev_r0 = res_select_r0;
-      } else {
-        flag_acum_r0 = true;
         // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
         else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
         gap_huff_r0++;
+        one_r0++;
+        prev_r0 = res_select_r0;
+      } else {
+        // is in tunstall
+        flag_acum_r0 = true;
+        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        gap_tc_r0++;
         prev_r0++;
         if(prev_r0 + 1 == res_select_r0)
           flag_acum_r0 = false;
@@ -362,21 +385,22 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      if(!flag_acum_r1) res_select_r1 = select_tchuff_r1(one_r1);
+      if(!flag_acum_r1 && one_r1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1);
+      else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
 
       if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
-        // is in tunstall
-        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
-        gap_tc_r1++;
-        one_r1++;
-        prev_r1 = res_select_r1;
-      } else {
         // is in huffman
-        flag_acum_r1 = true;
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;
+        one_r1++;
+        prev_r1 = res_select_r1;
+      } else {
+        // is in tunstall
+        flag_acum_r1 = true;
+        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        gap_tc_r1++;
         prev_r1++;
         if(prev_r1 + 1 == res_select_r1)
           flag_acum_r1 = false;
@@ -449,13 +473,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     gap_pos = block * br;
 
     // actual gaps in each structure
-    gap_tc_r0 = rank_tchuff_r0(gap_pos);
-    gap_huff_r0 = gap_pos - gap_tc_r0;
-    one_r0 = gap_tc_r0;
+    if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    else gap_huff_r0 = n_tchuff_r0;
+    gap_tc_r0 = gap_pos - gap_huff_r0;
+    one_r0 = gap_huff_r0; // are the same value in this point
 
-    gap_tc_r1 = rank_tchuff_r1(gap_pos);
-    gap_huff_r1 = gap_pos - gap_tc_r1;
-    one_r1 = gap_tc_r1;
+    if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    else gap_huff_r1 = n_tchuff_r1;
+    gap_tc_r1 = gap_pos - gap_huff_r1;
+    one_r1 = gap_huff_r1; // are the same value in this point
   } else if(block == 1 && pos >= i) {
     _ones = 0;
     _zeros = 0;
@@ -470,17 +496,29 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   uint64_t res_select_r0 = -1;
 
   if(block > 0 && pos < i) {
-    prev_r1 = select_tchuff_r1(one_r1);
-    res_select_r1 = select_tchuff_r1(one_r1 + 1);
-    if(prev_r1 + 1 != res_select_r1) {
+    if(one_r1 >= 1) {
+      prev_r1 = select_tchuff_r1(one_r1);
+      if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
+      if(one_r1 + 1 > n_tchuff_r1 || prev_r1 + 1 != res_select_r1) {
+        flag_acum_r1 = true;
+        prev_r1 = gap_pos - 1;
+      }
+    } else {
+      if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
       flag_acum_r1 = true;
       prev_r1 = gap_pos - 1;
     }
     one_r1++;
 
-    prev_r0 = select_tchuff_r0(one_r0);
-    res_select_r0 = select_tchuff_r0(one_r0 + 1);
-    if(prev_r0 + 1 != res_select_r0) {
+    if(one_r0 >= 1) {
+      prev_r0 = select_tchuff_r0(one_r0);
+      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
+      if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
+        flag_acum_r0 = true;
+        prev_r0 = gap_pos - 1;
+      }
+    } else {
+      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
       flag_acum_r0 = true;
       prev_r0 = gap_pos - 1;
     }
@@ -492,21 +530,22 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
       //if(tc_or_huffman_r0[gap_pos]) 
-      if(!flag_acum_r0) res_select_r0 = select_tchuff_r0(one_r0);
+      if(!flag_acum_r0 && one_r0 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0);
+      else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
 
       if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
-        // is in tunstall
-        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
-        gap_tc_r0++;
-        one_r0++;
-        prev_r0 = res_select_r0;
-      } else {
-        flag_acum_r0 = true;
         // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
         else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
         gap_huff_r0++;
+        one_r0++;
+        prev_r0 = res_select_r0;
+      } else {
+        // is in tunstall
+        flag_acum_r0 = true;
+        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
+        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        gap_tc_r0++;
         prev_r0++;
         if(prev_r0 + 1 == res_select_r0)
           flag_acum_r0 = false;
@@ -515,21 +554,23 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
-      if(!flag_acum_r1) res_select_r1 = select_tchuff_r1(one_r1);
+      if(!flag_acum_r1 && one_r1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1);
+      else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
+
 
       if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
-        // is in tunstall
-        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
-        gap_tc_r1++;
-        one_r1++;
-        prev_r1 = res_select_r1;
-      } else {
-        flag_acum_r1 = true;
         // is in huffman
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;
+        one_r1++;
+        prev_r1 = res_select_r1;
+      } else {
+        // is in tunstall
+        flag_acum_r1 = true;
+        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        gap_tc_r1++;
         prev_r1++;
         if(prev_r1 + 1 == res_select_r1)
           flag_acum_r1 = false;
