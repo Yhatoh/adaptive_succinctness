@@ -459,9 +459,18 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
 template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
 template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
 template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-//template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-//template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-//template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+
+typedef RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_252_bv;
+typedef RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_512_bv;
+typedef RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_1204_bv;
+typedef RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_252_rrr;
+typedef RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_512_rrr;
+typedef RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_1024_rrr;
+
+
 //template class RunEncoderAccess<18, 1024>;
 //template class RunEncoderAccess<20, 1024>;
 //template class RunEncoderAccess<22, 1024>;
