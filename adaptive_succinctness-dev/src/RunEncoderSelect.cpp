@@ -22,8 +22,8 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   u = pb[pb.size() - 1] + 1;
 
   std::cerr << "Creating sets R0 and R1..." << std::endl;
-  std::vector< uint32_t > R0;
-  std::vector< uint32_t > R1;
+  std::vector< uint64_t > R0;
+  std::vector< uint64_t > R1;
 
   uint64_t last = pb[0];
   R0.push_back(pb[0]);
@@ -39,7 +39,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   R1.push_back(pb[pb.size() - 1] - last + 1);
 
   std::cerr << "Creating bit_vectors..." << std::endl;
-  std::vector< uint32_t > PB_R0(R0.size(), 0);
+  std::vector< uint64_t > PB_R0(R0.size(), 0);
 
   PB_R0[0] = R0[0];
   //std::cerr << "R0: " << R0[0] << " ";
@@ -50,7 +50,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
 
   R0.clear();
 
-  std::vector< uint32_t > PB_R1(R1.size(), 0);
+  std::vector< uint64_t > PB_R1(R1.size(), 0);
 
   PB_R1[0] = R1[0];
   //std::cerr << "R1: " << R1[0] << " ";
@@ -79,11 +79,20 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
     GapsR0[i] = PB_R0[i] - PB_R0[i - 1];
   }
 
+  /*
+  for(uint64_t i = 1; i < GapsR0.size(); i++) {
+    if((uint64_t)GapsR0[i] != PB_R0[i] - PB_R0[i - 1]) {
+      std::cout << "Something is wrong with GapsR0[" << i << "]" << std::endl;
+      exit(1);
+    }
+  }
+  */
+
   std::cerr << "Creatings blocks of R0..." << std::endl;
   std::vector< uint64_t > br_R0;
   uint64_t i; 
   for(i = br; i <= PB_R0.size(); i += br) {
-    br_R0.push_back(PB_R0[i - 1]);
+    br_R0.push_back(PB_R0[i]);
   }
   
   if(PB_R0.size() % br != 0)
@@ -108,11 +117,20 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
     GapsR1[i] = PB_R1[i] - PB_R1[i - 1];
   } 
 
+  /*
+  for(uint64_t i = 1; i < GapsR1.size(); i++) {
+    if((uint64_t)GapsR1[i] != PB_R1[i] - PB_R1[i - 1]) {
+      std::cout << "Something is wrong with GapsR1[" << i << "]" << std::endl;
+      exit(1);
+    }
+  }
+  */
+
 
   std::cerr << "Creatings blocks of R1..." << std::endl;
   std::vector< uint64_t > br_R1;
   for(i = br; i <= PB_R1.size(); i += br) {
-    br_R1.push_back(PB_R1[i - 1]);
+    br_R1.push_back(PB_R1[i]);
   }
   
   if(PB_R1.size() % br != 0)
@@ -268,10 +286,12 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r0() {
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
+  ////debug(3);
   assert(k <= n);
 
   uint64_t block = rank_block_r1(k);
 
+  //debug(block);
   uint64_t pos = 0;
   bool take_gr0 = true;
 
@@ -302,7 +322,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     zeros = select_block_r0(block);
 
     // curr gap pos
-    gap_pos = block * br;
+    gap_pos = block * br + 1;
 
     // actual gaps in each structure
     if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
@@ -327,13 +347,19 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   uint64_t prev_r0 = -1;
   uint64_t res_select_r0 = -1;
 
+  ////debug(1);
+  //debug(gap_pos);
   if(block > 0) {
     if(one_r1 >= 1) {
       prev_r1 = select_tchuff_r1(one_r1);
+      //debug(prev_r1);
+      //debug(select_tchuff_r1(one_r1 + 1));
+      //debug(one_r1);
       if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
       if(one_r1 + 1 > n_tchuff_r1 || prev_r1 + 1 != res_select_r1) {
         flag_acum_r1 = true;
         prev_r1 = gap_pos - 1;
+        if(prev_r1 + 1 == res_select_r1) flag_acum_r1 = false;
       }
     } else {
       if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
@@ -344,10 +370,14 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
 
     if(one_r0 >= 1) {
       prev_r0 = select_tchuff_r0(one_r0);
+      //debug(prev_r0);
+      //debug(select_tchuff_r0(one_r0 + 1));
+      //debug(one_r0);
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
       if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
         flag_acum_r0 = true;
         prev_r0 = gap_pos - 1;
+        if(prev_r0 + 1 == res_select_r0) flag_acum_r0 = false;
       }
     } else {
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
@@ -357,6 +387,10 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     one_r0++;
   }
 
+  //debug(ones);
+  //debug(pos);
+  //debug(gap_pos);
+  ////debug(2);
   while(ones < k) {
     if(take_gr0) {
       // read from gap of run 0
@@ -364,6 +398,10 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       if(!flag_acum_r0 && one_r0 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0);
       else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
 
+      //debug(1);
+      //debug(flag_acum_r0);
+      //debug(prev_r0);
+      //debug(res_select_r0);
       if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
         // is in huffman
         if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
@@ -382,14 +420,22 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
           flag_acum_r0 = false;
       }
       pos += act_zeros;
+      //debug(pos);
+      //debug(ones);
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
       if(!flag_acum_r1 && one_r1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1);
       else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
 
+      //debug(2);
+      //debug(flag_acum_r1);
+      //debug(prev_r1);
+      //debug(res_select_r1);
+      //debug(gap_huff_r1+gap_tc_r1);
       if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
         // is in huffman
+        //debug("HUFF");
         if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
         else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
         gap_huff_r1++;
@@ -397,6 +443,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
         prev_r1 = res_select_r1;
       } else {
         // is in tunstall
+        //debug("TUNSTALL");
         flag_acum_r1 = true;
         if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
         else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
@@ -408,6 +455,8 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       pos += act_ones;
       ones += act_ones;
       gap_pos++;
+      //debug(pos);
+      //debug(ones);
     }
     take_gr0 = !take_gr0;
   }
@@ -470,7 +519,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   bool take_gr0 = true;
   if(block > 0 && pos < i) {
     // curr gap pos
-    gap_pos = block * br;
+    gap_pos = block * br + 1;
 
     // actual gaps in each structure
     if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
@@ -502,6 +551,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
       if(one_r1 + 1 > n_tchuff_r1 || prev_r1 + 1 != res_select_r1) {
         flag_acum_r1 = true;
         prev_r1 = gap_pos - 1;
+        if(prev_r1 + 1 == res_select_r1) flag_acum_r1 = false;
       }
     } else {
       if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
@@ -516,6 +566,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
       if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
         flag_acum_r0 = true;
         prev_r0 = gap_pos - 1;
+        if(prev_r0 + 1 == res_select_r0) flag_acum_r0 = false;
       }
     } else {
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
@@ -593,9 +644,9 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 512, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 1024, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 256, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<18, 1024>;
 //template class RunEncoderSelect<20, 1024>;
 //template class RunEncoderSelect<22, 1024>;
