@@ -10,6 +10,18 @@
 #include "../util/tunstallCoder.hpp"
 #include "../util/huffman_coder.hpp"
 
+#include <chrono>
+
+extern std::chrono::high_resolution_clock::time_point block_start, block_stop;
+extern std::chrono::high_resolution_clock::time_point tunst_start, tunst_stop;
+extern std::chrono::high_resolution_clock::time_point huff_start, huff_stop;
+extern std::chrono::high_resolution_clock::time_point select_start, select_stop;
+extern std::chrono::duration< double > block_time, huff_time, tunst_time, select_time;
+extern double block_total_time;
+extern double tunst_total_time;
+extern double huff_total_time;
+extern double select_total_time;
+
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 class RunEncoderSelect {
 public:

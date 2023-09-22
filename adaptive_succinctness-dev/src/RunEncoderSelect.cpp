@@ -1,5 +1,18 @@
 #include "RunEncoderSelect.hpp"
 
+#include <chrono>
+using namespace std;
+
+chrono::high_resolution_clock::time_point block_start, block_stop;
+chrono::high_resolution_clock::time_point tunst_start, tunst_stop;
+chrono::high_resolution_clock::time_point huff_start, huff_stop;
+chrono::high_resolution_clock::time_point select_start, select_stop;
+chrono::duration< double > block_time, huff_time, tunst_time, select_time;
+double block_total_time = 0;
+double tunst_total_time = 0;
+double huff_total_time = 0;
+double select_total_time = 0;
+
 #define debug(x) std::cout << #x << ": " << x << std::endl
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
@@ -97,12 +110,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   
   if(PB_R0.size() % br != 0)
     br_R0.push_back(PB_R0[PB_R0.size() - 1]);
- 
-  //block_r0.resize(br_R0[br_R0.size() - 1] + 1);
-  //sdsl::util::_set_zero_bits(block_r0);
-  //for(uint64_t j = 0; j < br_R0.size(); j++) {
-  //  block_r0[br_R0[j]] = 1;
-  //}
+
   block_r0 = _bv(br_R0.begin(), br_R0.end());
 
   n_block_r0 = br_R0.size();
@@ -136,12 +144,6 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   if(PB_R1.size() % br != 0)
     br_R1.push_back(PB_R1[PB_R1.size() - 1]);
  
-  //block_r1.resize(br_R1[br_R1.size() - 1] + 1);
-  //sdsl::util::_set_zero_bits(block_r1);
-  //for(auto j : br_R1) {
-  //  block_r1[j] = 1;
-  //}
-  
   block_r1 = _bv(br_R1.begin(), br_R1.end());
 
   n_block_r1 = br_R1.size();
@@ -286,12 +288,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r0() {
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
-  ////debug(3);
+  
+
   assert(k <= n);
 
+#ifdef SPLIT_TIME
+  block_start = chrono::high_resolution_clock::now();
+#endif
   uint64_t block = rank_block_r1(k);
 
-  //debug(block);
   uint64_t pos = 0;
   bool take_gr0 = true;
 
@@ -347,14 +352,9 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   uint64_t prev_r0 = -1;
   uint64_t res_select_r0 = -1;
 
-  ////debug(1);
-  //debug(gap_pos);
   if(block > 0) {
     if(one_r1 >= 1) {
       prev_r1 = select_tchuff_r1(one_r1);
-      //debug(prev_r1);
-      //debug(select_tchuff_r1(one_r1 + 1));
-      //debug(one_r1);
       if(one_r1 + 1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1 + 1);
       if(one_r1 + 1 > n_tchuff_r1 || prev_r1 + 1 != res_select_r1) {
         flag_acum_r1 = true;
@@ -370,9 +370,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
 
     if(one_r0 >= 1) {
       prev_r0 = select_tchuff_r0(one_r0);
-      //debug(prev_r0);
-      //debug(select_tchuff_r0(one_r0 + 1));
-      //debug(one_r0);
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
       if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
         flag_acum_r0 = true;
@@ -386,77 +383,136 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     one_r0++;
   }
+#ifdef SPLIT_TIME
+  block_stop = chrono::high_resolution_clock::now();
+  block_time = chrono::duration_cast< chrono::microseconds >(block_stop - block_start);
+  block_total_time += block_time.count();
+#endif
 
-  //debug(ones);
-  //debug(pos);
-  //debug(gap_pos);
-  ////debug(2);
+  auto prev_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  auto prev_huff_r1 = (gap_huff_r1 == 0 ? 0 : huffman_r1.decode(gap_huff_r1 - 1));
+  auto prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  auto prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
+
   while(ones < k) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
+#ifdef SPLIT_TIME
+      select_start = chrono::high_resolution_clock::now();
+#endif
       if(!flag_acum_r0 && one_r0 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0);
       else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
 
-      //debug(1);
-      //debug(flag_acum_r0);
-      //debug(prev_r0);
-      //debug(res_select_r0);
+#ifdef SPLIT_TIME
+      select_stop = chrono::high_resolution_clock::now();
+      select_time = chrono::duration_cast< chrono::microseconds >(select_stop - select_start);
+      select_total_time += select_time.count();
+#endif
+    
       if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
-        // is in huffman
-        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
-        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+#ifdef SPLIT_TIME
+        huff_start = chrono::high_resolution_clock::now();
+#endif
+        auto decode = huffman_r0.decode(gap_huff_r0);
+        act_zeros = decode - prev_huff_r0;
+        prev_huff_r0 = decode;
+
         gap_huff_r0++;
         one_r0++;
         prev_r0 = res_select_r0;
+
+#ifdef SPLIT_TIME
+        huff_stop = chrono::high_resolution_clock::now();
+        huff_time = chrono::duration_cast< chrono::microseconds >(huff_stop - huff_start);
+        huff_total_time += huff_time.count();
+#endif
       } else {
+#ifdef SPLIT_TIME
+        tunst_start = chrono::high_resolution_clock::now();
+#endif
+
         // is in tunstall
         flag_acum_r0 = true;
-        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+
+        auto decode = tc_r0_top_k.decode(gap_tc_r0);
+        act_zeros = decode - prev_tunst_r0;
+        prev_tunst_r0 = decode;
+
         gap_tc_r0++;
         prev_r0++;
         if(prev_r0 + 1 == res_select_r0)
           flag_acum_r0 = false;
+
+#ifdef SPLIT_TIME
+        tunst_stop = chrono::high_resolution_clock::now();
+        tunst_time = chrono::duration_cast< chrono::microseconds >(tunst_stop - tunst_start);
+        tunst_total_time += tunst_time.count();
+#endif
       }
       pos += act_zeros;
-      //debug(pos);
-      //debug(ones);
     } else {
       // read from gap of run 1
       uint64_t act_ones = 0;
+#ifdef SPLIT_TIME
+      select_start = chrono::high_resolution_clock::now();
+#endif
+
       if(!flag_acum_r1 && one_r1 <= n_tchuff_r1) res_select_r1 = select_tchuff_r1(one_r1);
       else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
 
-      //debug(2);
-      //debug(flag_acum_r1);
-      //debug(prev_r1);
-      //debug(res_select_r1);
-      //debug(gap_huff_r1+gap_tc_r1);
+#ifdef SPLIT_TIME
+      select_stop = chrono::high_resolution_clock::now();
+      select_time = chrono::duration_cast< chrono::microseconds >(select_stop - select_start);
+      select_total_time += select_time.count();
+#endif
+
       if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
-        // is in huffman
-        //debug("HUFF");
-        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
-        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+#ifdef SPLIT_TIME
+        huff_start = chrono::high_resolution_clock::now();
+#endif
+
+        auto decode = huffman_r1.decode(gap_huff_r1);
+        act_ones = decode - prev_huff_r1;
+        prev_huff_r1 = decode;
+
         gap_huff_r1++;
         one_r1++;
         prev_r1 = res_select_r1;
+
+#ifdef SPLIT_TIME
+        huff_stop = chrono::high_resolution_clock::now();
+        huff_time = chrono::duration_cast< chrono::microseconds >(huff_stop - huff_start);
+        huff_total_time += huff_time.count();
+#endif
       } else {
+#ifdef SPLIT_TIME
+        tunst_start = chrono::high_resolution_clock::now();
+#endif
+
         // is in tunstall
-        //debug("TUNSTALL");
         flag_acum_r1 = true;
-        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        //if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
+        //else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+
+        auto decode = tc_r1_top_k.decode(gap_tc_r1);
+        act_ones = decode - prev_tunst_r1;
+        prev_tunst_r1 = decode;
+
         gap_tc_r1++;
         prev_r1++;
         if(prev_r1 + 1 == res_select_r1)
           flag_acum_r1 = false;
+
+#ifdef SPLIT_TIME
+        tunst_stop = chrono::high_resolution_clock::now();
+        tunst_time = chrono::duration_cast< chrono::microseconds >(tunst_stop - tunst_start);
+        tunst_total_time += tunst_time.count();
+#endif
       }
       pos += act_ones;
       ones += act_ones;
       gap_pos++;
-      //debug(pos);
-      //debug(ones);
     }
     take_gr0 = !take_gr0;
   }
@@ -580,7 +636,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
-      //if(tc_or_huffman_r0[gap_pos]) 
       if(!flag_acum_r0 && one_r0 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0);
       else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
 
@@ -644,10 +699,8 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
+template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 template class RunEncoderSelect<16, 256, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 template class RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 template class RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-//template class RunEncoderSelect<18, 1024>;
-//template class RunEncoderSelect<20, 1024>;
-//template class RunEncoderSelect<22, 1024>;
-//template class RunEncoderSelect<24, 1024>;
