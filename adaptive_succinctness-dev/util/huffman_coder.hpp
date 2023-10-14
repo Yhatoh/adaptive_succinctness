@@ -60,7 +60,7 @@ public:
     huffman_coder();
     ~huffman_coder();
     void encode(std::vector<uint32_t> &seq, uint32_t block_size);    
-    uint32_t decode(uint64_t i);
+    uint64_t decode(uint64_t i);
     float size_bpe();
     uint64_t size_bits();
     uint64_t size();

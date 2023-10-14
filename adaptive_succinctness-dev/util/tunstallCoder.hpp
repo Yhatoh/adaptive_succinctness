@@ -51,7 +51,7 @@ public:
     tunstall_coder();
     tunstall_coder(std::vector<uint32_t> &seq, uint32_t block_size, uint64_t D_size_init);
     
-    uint32_t decode(uint64_t i);  
+    uint64_t decode(uint64_t i);  
     uint64_t dict_size(); // Tunstall dictionary size, in bytes  
     uint64_t compressed_seq_size();
     uint64_t block_vec_size();

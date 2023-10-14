@@ -203,9 +203,9 @@ void RunEncoderPasta<w,bs,br,_bv,_rank_select>::top_k_encoding(std::vector< uint
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
+    } else {
       if(type) tc_or_huffman_r1[i] = 1;
       else tc_or_huffman_r0[i] = 1;
-    } else {
       hf_seq.push_back(seq[i]);
     }
   }
@@ -574,9 +574,9 @@ uint64_t RunEncoderPasta<w,bs,br,_bv,_rank_select>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderPasta<16, 256, 512, pasta::BitVector, pasta::FlatRankSelect<>>;
-//template class RunEncoderPasta<16, 512, 512, pasta::BitVector, pasta::FlatRankSelect<>>;
-//template class RunEncoderPasta<16, 1024, 512, pasta::BitVector, pasta::FlatRankSelect<>>;
+template class RunEncoderPasta<16, 256, 523776, pasta::BitVector, pasta::FlatRankSelect<>>;
+template class RunEncoderPasta<16, 512, 523776, pasta::BitVector, pasta::FlatRankSelect<>>;
+template class RunEncoderPasta<16, 1024, 523776, pasta::BitVector, pasta::FlatRankSelect<>>;
 //template class RunEncoderPasta<18, 1024>;
 //template class RunEncoderPasta<20, 1024>;
 //template class RunEncoderPasta<22, 1024>;

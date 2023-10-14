@@ -22,8 +22,8 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   u = pb[pb.size() - 1] + 1;
 
   std::cerr << "Creating sets R0 and R1..." << std::endl;
-  std::vector< uint32_t > R0;
-  std::vector< uint32_t > R1;
+  std::vector< uint64_t > R0;
+  std::vector< uint64_t > R1;
 
   uint64_t last = pb[0];
   R0.push_back(pb[0]);
@@ -39,7 +39,7 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   R1.push_back(pb[pb.size() - 1] - last + 1);
 
   std::cerr << "Creating bit_vectors..." << std::endl;
-  std::vector< uint32_t > PB_R0(R0.size(), 0);
+  std::vector< uint64_t > PB_R0(R0.size(), 0);
 
   PB_R0[0] = R0[0];
   //std::cerr << "R0: " << R0[0] << " ";
@@ -50,7 +50,7 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
 
   R0.clear();
 
-  std::vector< uint32_t > PB_R1(R1.size(), 0);
+  std::vector< uint64_t > PB_R1(R1.size(), 0);
 
   PB_R1[0] = R1[0];
   //std::cerr << "R1: " << R1[0] << " ";
@@ -89,6 +89,7 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   if(PB_R0.size() % br != 0)
     br_R0.push_back(PB_R0[PB_R0.size() - 1]);
  
+  std::cerr << br_R0[br_R0.size() - 1] + 1 << "\n";
   sdsl::bit_vector block_r0_help(br_R0[br_R0.size() - 1] + 1);
   sdsl::util::_set_zero_bits(block_r0_help);
   for(uint64_t j = 0; j < br_R0.size(); j++) {
@@ -456,22 +457,12 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-
-typedef RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_252_bv;
-typedef RunEncoderAccess<16, 512, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_512_bv;
-typedef RunEncoderAccess<16, 1024, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> rea_1204_bv;
-typedef RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_252_rrr;
-typedef RunEncoderAccess<16, 512, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_512_rrr;
-typedef RunEncoderAccess<16, 1024, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> rea_1024_rrr;
-
-
-//template class RunEncoderAccess<18, 1024>;
-//template class RunEncoderAccess<20, 1024>;
-//template class RunEncoderAccess<22, 1024>;
-//template class RunEncoderAccess<24, 1024>;
+template class RunEncoderAccess<16, 256, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 512, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 1024, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
+template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
+template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
+template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;

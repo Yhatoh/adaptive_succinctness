@@ -427,7 +427,7 @@ void huffman_coder::encode(vector<uint32_t> &seq, uint32_t _block_size)
 }
 
 
-uint32_t huffman_coder::decode(uint64_t i)
+uint64_t huffman_coder::decode(uint64_t i)
 {
     uint32_t n_decoded, cur_int;
     uint32_t code = 0;

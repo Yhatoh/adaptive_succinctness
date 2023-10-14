@@ -163,7 +163,7 @@ tunstall_coder<w>::tunstall_coder(vector<uint32_t>& seq, uint32_t block_size, ui
 }
 
 template< uint16_t w >
-uint32_t tunstall_coder<w>::decode(uint64_t i) {
+uint64_t tunstall_coder<w>::decode(uint64_t i) {
     uint64_t b_ = i / bSize;
 
     uint64_t sum = block[b_].prefix_sum;
