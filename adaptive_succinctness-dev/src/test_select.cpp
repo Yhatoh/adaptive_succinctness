@@ -125,7 +125,6 @@ int main() {
   PB_R1.clear();
   PB_R0.clear();
 
-  */
   {
     sdsl::sd_vector<> sd(bv);
     sdsl::rank_support_sd<1> rank_sd(&sd);
@@ -155,23 +154,24 @@ int main() {
     total_time_s = time_span_s.count();
     cout << "SD SELECT: " << Q_s << " " << total_time_s * 1000000 / n_queries << endl;
   }
-  std::vector< uint64_t > ks = {4, 8, 16, 32, 64};
+  */
+  std::vector< uint64_t > ks = {64};//4, 8, 16, 32, 64};
   {
     for(uint64_t k : ks) {
       res_256_sd_64 run(seq, k);
 
-      sdsl::sd_vector<> sd(bv);
-      sdsl::rank_support_sd<1> rank_sd(&sd);
-      sdsl::select_support_sd<1> select_sd(&sd);
+      //sdsl::sd_vector<> sd(bv);
+      //sdsl::rank_support_sd<1> rank_sd(&sd);
+      //sdsl::select_support_sd<1> select_sd(&sd);
 
       chrono::high_resolution_clock::time_point start, stop;
       double total_time = 0;
       chrono::duration< double > time_span;
       uint64_t q = 0;
       start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vrank.size(); i++){
-        q += run.rank(vrank[i]);
-      }
+      //for(uint64_t i = 0; i < vrank.size(); i++){
+      //  q += run.rank(vrank[i]);
+      //}
       stop = chrono::high_resolution_clock::now();
       time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
       total_time = time_span.count();
@@ -183,6 +183,13 @@ int main() {
       uint64_t q_s = 0;
       start_s = chrono::high_resolution_clock::now();
       for(uint64_t i = 0; i < vselect.size(); i++) {
+        auto ret_run = run.select(vselect[i]);
+        uint64_t ret_sd = 0;
+        //auto ret_sd = select_sd(vselect[i]);
+        if(ret_run != ret_sd) {
+          cout << "--- " << ret_run << " " << ret_sd << " " << i << " " << vselect[i] << "\n";
+          break;
+        }
         q_s += run.select(vselect[i]);
       }
       stop_s = chrono::high_resolution_clock::now();
@@ -201,6 +208,7 @@ int main() {
       select_total_time = 0;
     }
   }
+  /*
   {
     for(uint64_t k : ks) {
       res_256_sd_128 run(seq, k);
@@ -368,6 +376,7 @@ int main() {
       select_total_time = 0;
     }
   }
+  */
   /*
      {
      for(uint64_t k : ks) {
