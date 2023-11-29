@@ -20,16 +20,18 @@
 
 using namespace std;
 
-typedef RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
-                         sdsl::rank_support_sd<1>> res_256_sd_64;
-typedef RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
-                         sdsl::rank_support_sd<1>> res_256_sd_128;
-typedef RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_256_sd_256;
-typedef RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_256_sd_512;
-typedef RunEncoderSelect<16, 256, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_256_sd_2048;
+typedef RunEncoderSelect<16, 64, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_64_sd_32;
+typedef RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_64_sd_64;
+typedef RunEncoderSelect<16, 64, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_64_sd_128;
+typedef RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>> res_64_sd_64;
+typedef RunEncoderSelect<16, 64, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>> res_64_sd_512;
+//typedef RunEncoderSelect<16, 64, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+//                         sdsl::rank_support_sd<1>> res_64_sd_2048;
 //typedef RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> res_512_sd;
 //typedef RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> res_1024_sd;
 
@@ -124,6 +126,7 @@ int main() {
   cout << "Check block: " << PB_R1[14201508 * 64 + 64] << "\n";
   PB_R1.clear();
   PB_R0.clear();
+  */
 
   {
     sdsl::sd_vector<> sd(bv);
@@ -154,11 +157,10 @@ int main() {
     total_time_s = time_span_s.count();
     cout << "SD SELECT: " << Q_s << " " << total_time_s * 1000000 / n_queries << endl;
   }
-  */
   std::vector< uint64_t > ks = {64};//4, 8, 16, 32, 64};
   {
     for(uint64_t k : ks) {
-      res_256_sd_64 run(seq, k);
+      res_64_sd_32 run(seq, k);
 
       //sdsl::sd_vector<> sd(bv);
       //sdsl::rank_support_sd<1> rank_sd(&sd);
@@ -169,9 +171,9 @@ int main() {
       chrono::duration< double > time_span;
       uint64_t q = 0;
       start = chrono::high_resolution_clock::now();
-      //for(uint64_t i = 0; i < vrank.size(); i++){
-      //  q += run.rank(vrank[i]);
-      //}
+      for(uint64_t i = 0; i < vrank.size(); i++){
+        q += run.rank(vrank[i]);
+      }
       stop = chrono::high_resolution_clock::now();
       time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
       total_time = time_span.count();
@@ -182,14 +184,52 @@ int main() {
       chrono::duration< double > time_span_s;
       uint64_t q_s = 0;
       start_s = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vselect.size(); i++) {
-        auto ret_run = run.select(vselect[i]);
-        uint64_t ret_sd = 0;
-        //auto ret_sd = select_sd(vselect[i]);
-        if(ret_run != ret_sd) {
-          cout << "--- " << ret_run << " " << ret_sd << " " << i << " " << vselect[i] << "\n";
-          break;
-        }
+      for(uint64_t i = 0; i < vselect.size(); i++){
+        q_s += run.select(vselect[i]);
+      }
+      stop_s = chrono::high_resolution_clock::now();
+      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
+      total_time_s = time_span_s.count();
+
+      print_info(256, 64, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
+                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
+      cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
+      cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
+      cout << "HUFFMAN TIME " << huff_total_time * 1000000 / n_queries << "\n";
+      cout << "SELECT TIME " << select_total_time * 1000000 / n_queries << "\n";
+      block_total_time = 0;
+      tunst_total_time = 0;
+      huff_total_time = 0;
+      select_total_time = 0;
+    }
+  }
+  {
+    for(uint64_t k : ks) {
+      res_64_sd_64 run(seq, k);
+
+      //sdsl::sd_vector<> sd(bv);
+      //sdsl::rank_support_sd<1> rank_sd(&sd);
+      //sdsl::select_support_sd<1> select_sd(&sd);
+
+      chrono::high_resolution_clock::time_point start, stop;
+      double total_time = 0;
+      chrono::duration< double > time_span;
+      uint64_t q = 0;
+      start = chrono::high_resolution_clock::now();
+      for(uint64_t i = 0; i < vrank.size(); i++){
+        q += run.rank(vrank[i]);
+      }
+      stop = chrono::high_resolution_clock::now();
+      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
+      total_time = time_span.count();
+
+
+      chrono::high_resolution_clock::time_point start_s, stop_s;
+      double total_time_s = 0;
+      chrono::duration< double > time_span_s;
+      uint64_t q_s = 0;
+      start_s = chrono::high_resolution_clock::now();
+      for(uint64_t i = 0; i < vselect.size(); i++){
         q_s += run.select(vselect[i]);
       }
       stop_s = chrono::high_resolution_clock::now();
