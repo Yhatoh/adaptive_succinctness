@@ -299,18 +299,16 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   if(block > 0) {
     // ones and zeros until block
     ones = select_block_r1(block); 
-    //zeros = select_block_r0(block);
+    zeros = select_block_r0(block);
 
     // curr gap pos
     gap_pos = block * br + 1;
 
-    /*
     // actual gaps in each structure
     if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
     else gap_huff_r0 = n_tchuff_r0;
     gap_tc_r0 = gap_pos - gap_huff_r0;
     one_r0 = gap_huff_r0; // are the same value in this point
-    */
 
     if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
     else gap_huff_r1 = n_tchuff_r1;
@@ -318,7 +316,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     one_r1 = gap_huff_r1; // are the same value in this point
 
     // pos before block
-    //pos += zeros;
+    pos += zeros;
     pos += ones;
   }
 
@@ -345,7 +343,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     one_r1++;
 
-    /*
     if(one_r0 >= 1) {
       prev_r0 = select_tchuff_r0(one_r0);
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
@@ -360,7 +357,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       prev_r0 = gap_pos - 1;
     }
     one_r0++;
-    */
   }
 #ifdef SPLIT_TIME
   block_stop = chrono::high_resolution_clock::now();
@@ -368,13 +364,12 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   block_total_time += block_time.count();
 #endif
 
-  //uint64_t prev_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  uint64_t prev_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
   uint64_t prev_huff_r1 = (gap_huff_r1 == 0 ? 0 : huffman_r1.decode(gap_huff_r1 - 1));
-  //uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
   uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
 
   while(ones < k) {
-    /*
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
@@ -433,7 +428,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       }
       pos += act_zeros;
     } else {
-    */
       // read from gap of run 1
       uint64_t act_ones = 0;
 #ifdef SPLIT_TIME
@@ -494,30 +488,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       pos += act_ones;
       ones += act_ones;
       gap_pos++;
-    //}
+    }
     take_gr0 = !take_gr0;
   }
 
-  debug(pos);
-  debug(ones);
-
-  // actual gaps in each structure
-  if(gap_pos + 1 <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos + 1);
-  else gap_huff_r0 = n_tchuff_r0;
-  gap_tc_r0 = gap_pos + 1 - gap_huff_r0;
-  uint64_t value_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0));
-  uint64_t value_tc_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0));
-  pos += value_huff_r0;
-  pos += value_tc_r0;
-
-  debug(value_tc_r0);
-  debug(value_huff_r0);
   if(ones > k) {
     pos -= ones - k;
   }
 
   return pos - 2;
-
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
