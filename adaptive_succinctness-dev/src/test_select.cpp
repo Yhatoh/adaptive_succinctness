@@ -14,21 +14,21 @@
 #include "RunEncoderSelect.hpp"
 #include "randomer.hpp"
 
-#define n_queries 1000
+#define n_queries 100000
 #define U 196433254820
 #define N 5055078462
 
 using namespace std;
 
-typedef RunEncoderSelect<16, 64, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
-                         sdsl::rank_support_sd<1>> res_64_sd_32;
-typedef RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
-                         sdsl::rank_support_sd<1>> res_64_sd_64;
-typedef RunEncoderSelect<16, 64, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
-                         sdsl::rank_support_sd<1>> res_64_sd_128;
-typedef RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_64_sd_64;
-typedef RunEncoderSelect<16, 64, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+typedef RunEncoderSelect<16, 256, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_256_sd_32;
+typedef RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_256_sd_64;
+typedef RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, 
+                         sdsl::rank_support_sd<1>> res_256_sd_128;
+typedef RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>> res_256_sd_64;
+typedef RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
                          sdsl::rank_support_sd<1>> res_64_sd_512;
 //typedef RunEncoderSelect<16, 64, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>,
 //                         sdsl::rank_support_sd<1>> res_64_sd_2048;
@@ -160,7 +160,7 @@ int main() {
   std::vector< uint64_t > ks = {64};//4, 8, 16, 32, 64};
   {
     for(uint64_t k : ks) {
-      res_64_sd_32 run(seq, k);
+      res_256_sd_32 run(seq, k);
 
       //sdsl::sd_vector<> sd(bv);
       //sdsl::rank_support_sd<1> rank_sd(&sd);
@@ -191,7 +191,7 @@ int main() {
       time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
       total_time_s = time_span_s.count();
 
-      print_info(256, 64, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
+      print_info(256, 32, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
                  q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
       cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
       cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
@@ -205,7 +205,7 @@ int main() {
   }
   {
     for(uint64_t k : ks) {
-      res_64_sd_64 run(seq, k);
+      res_256_sd_64 run(seq, k);
 
       //sdsl::sd_vector<> sd(bv);
       //sdsl::rank_support_sd<1> rank_sd(&sd);
