@@ -2,20 +2,18 @@
 
 #define debug(x) std::cout << #x << ": " << x << std::endl
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(sdsl::bit_vector &bv, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::RunEncoderAccess(sdsl::bit_vector &bv, uint64_t top_k) {
 
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64_t> &pb, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::RunEncoderAccess(std::vector<uint64_t> &pb, uint64_t top_k) {
   top_most_freq = top_k;
   std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
 
   std::cerr << "Adding a 0 at the beginning" << std::endl;
   
-  for(uint64_t i = 0; i < pb.size(); i++) pb[i]++;
-
   std::cerr << "Calculating Runs..." << std::endl;
   
   n = pb.size();
@@ -25,18 +23,18 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   std::vector< uint64_t > R0;
   std::vector< uint64_t > R1;
 
-  uint64_t last = pb[0];
-  R0.push_back(pb[0]);
+  uint64_t last = pb[0] + 1;
+  R0.push_back(pb[0] + 1);
 
   for(uint64_t i = 1; i < pb.size(); i++) {
     if(pb[i] > pb[i - 1] + 1) {
-      R1.push_back(pb[i - 1] - last + 1);
+      R1.push_back(pb[i - 1] + 1 - last + 1);
       R0.push_back(pb[i] - pb[i - 1] - 1);
-      last = pb[i];
+      last = pb[i] + 1;
     }
   }
 
-  R1.push_back(pb[pb.size() - 1] - last + 1);
+  R1.push_back(pb[pb.size() - 1] + 1 - last + 1);
 
   std::cerr << "Creating bit_vectors..." << std::endl;
   std::vector< uint64_t > PB_R0(R0.size(), 0);
@@ -83,7 +81,7 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   std::vector< uint64_t > br_R0;
   uint64_t i; 
   for(i = br; i <= PB_R0.size(); i += br) {
-    br_R0.push_back(PB_R0[i - 1]);
+    br_R0.push_back(PB_R0[i]);
   }
   
   if(PB_R0.size() % br != 0)
@@ -113,7 +111,7 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   std::cerr << "Creatings blocks of R1..." << std::endl;
   std::vector< uint64_t > br_R1;
   for(i = br; i <= PB_R1.size(); i += br) {
-    br_R1.push_back(PB_R1[i - 1]);
+    br_R1.push_back(PB_R1[i]);
   }
   
   if(PB_R1.size() % br != 0)
@@ -148,8 +146,8 @@ RunEncoderAccess<w,bs,br,_bv,_select,_rank>::RunEncoderAccess(std::vector<uint64
   std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res) {
   uint64_t sum = 0;
   res[0] = pb[0] - 1;
   for(uint64_t i = 1; i < pb.size(); i++) {
@@ -160,8 +158,8 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::get_runs(std::vector<uint6
   return sum;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+void RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
   //std::cerr << "Creating frequency map..." << std::endl;
   std::map< uint32_t, uint64_t > freq_map;
   for(uint64_t i = 0; i < seq.size(); i++) {
@@ -198,8 +196,6 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
       tc_seq.push_back(seq[i]);
-      //if(type) tc_or_huffman_r1[i] = 1;
-      //else tc_or_huffman_r0[i] = 1;
     } else {
       tc_or_huffman_help[i] = 1;
       hf_seq.push_back(seq[i]);
@@ -207,8 +203,10 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   }
  
   if(type) {
+    n_tchuff_r1 = tc_or_huffman_help.size();
     tc_or_huffman_r1 = _bv(tc_or_huffman_help);
   } else {
+    n_tchuff_r0 = tc_or_huffman_help.size();
     tc_or_huffman_r0 = _bv(tc_or_huffman_help);
   }
 
@@ -230,8 +228,8 @@ void RunEncoderAccess<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
   //std::cerr << "Done..." << std::endl;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::bits_tunstall_seq() {
   /*std::cout << "--- Gaps R0 ---" << std::endl;
   std::cout << "Dict size: " << tc_r0.dict_size() * 8 << " " << (double) tc_r0.dict_size() * 8 / n << std::endl;
   std::cout << "Compressed seq size: " << tc_r0.compressed_seq_size() * 8 << " " << (double) tc_r0.compressed_seq_size() * 8 / n << std::endl;
@@ -255,18 +253,18 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
          2 * sizeof(uint64_t);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::size_block_r1() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::size_block_r1() {
   return sdsl::size_in_bytes(block_r1) + sdsl::size_in_bytes(select_block_r1) + sdsl::size_in_bytes(rank_block_r1);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::size_block_r0() {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::size_block_r0() {
   return sdsl::size_in_bytes(block_r0) + sdsl::size_in_bytes(select_block_r0) + sdsl::size_in_bytes(rank_block_r0);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::select(uint64_t k) {
   assert(k <= n);
 
   uint64_t block = rank_block_r1(k);
@@ -289,19 +287,22 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   uint64_t gap_tc_r1 = 0;
   // current gap in huffman R1
   uint64_t gap_huff_r1 = 0;
-  
+
   if(block > 0) {
     // ones and zeros until block
     ones = select_block_r1(block);
     zeros = select_block_r0(block);
 
     // curr gap pos
-    gap_pos = block * br;
+    gap_pos = block * br + 1;
 
     // actual gaps in each structure
-    gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    else gap_huff_r0 = n_tchuff_r0;
     gap_tc_r0 = gap_pos - gap_huff_r0;
-    gap_huff_r1 = rank_tchuff_r1(gap_pos);
+
+    if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    else gap_huff_r1 = n_tchuff_r1;
     gap_tc_r1 = gap_pos - gap_huff_r1;
 
     // pos before block
@@ -309,19 +310,26 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     pos += ones;
   }
 
+  uint64_t prev_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  uint64_t prev_huff_r1 = (gap_huff_r1 == 0 ? 0 : huffman_r1.decode(gap_huff_r1 - 1));
+  uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
+
   while(ones < k) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
       if(!tc_or_huffman_r0[gap_pos]) {
         // is in tunstall
-        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        uint64_t decode = tc_r0_top_k.decode(gap_tc_r0);
+        act_zeros = decode - prev_tunst_r0;
+        prev_tunst_r0 = decode;
         gap_tc_r0++;
       } else {
         // is in huffman
-        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
-        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+        uint64_t decode = huffman_r0.decode(gap_huff_r0);
+        act_zeros = decode - prev_huff_r0;
+        prev_huff_r0 = decode;
         gap_huff_r0++;
       }
       pos += act_zeros;
@@ -330,13 +338,15 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       uint64_t act_ones = 0;
       if(!tc_or_huffman_r1[gap_pos]) {
         // is in tunstall
-        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        uint64_t decode = tc_r1_top_k.decode(gap_tc_r1);
+        act_ones = decode - prev_tunst_r1;
+        prev_tunst_r1 = decode;
         gap_tc_r1++;
       } else {
         // is in huffman
-        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
-        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        uint64_t decode = huffman_r1.decode(gap_huff_r1);
+        act_ones = decode - prev_huff_r1;
+        prev_huff_r1 = decode;
         gap_huff_r1++;
       }
       pos += act_ones;
@@ -353,8 +363,8 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   return pos - 2;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
+template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _rank, class _bv2, class _select, class _rank2 >
+uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::rank(uint64_t i) {
   i++;
   if(i >= u) return n;
   uint64_t l = 1;
@@ -398,12 +408,15 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   bool take_gr0 = true;
   if(block > 0 && pos < i) {
     // curr gap pos
-    gap_pos = block * br;
+    gap_pos = block * br + 1;
 
     // actual gaps in each structure
-    gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
+    else gap_huff_r0 = n_tchuff_r0;
     gap_tc_r0 = gap_pos - gap_huff_r0;
-    gap_huff_r1 = rank_tchuff_r1(gap_pos);
+
+    if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
+    else gap_huff_r1 = n_tchuff_r1;
     gap_tc_r1 = gap_pos - gap_huff_r1;
   } else if(block == 1 && pos >= i) {
     _ones = 0;
@@ -411,19 +424,26 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     pos = 0;
   }
 
+  uint64_t prev_huff_r0 = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  uint64_t prev_huff_r1 = (gap_huff_r1 == 0 ? 0 : huffman_r1.decode(gap_huff_r1 - 1));
+  uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
+
   while(pos <= i) {
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
       if(!tc_or_huffman_r0[gap_pos]) {
         // is in tunstall
-        if(gap_tc_r0 == 0) act_zeros = tc_r0_top_k.decode(gap_tc_r0);
-        else act_zeros = tc_r0_top_k.decode(gap_tc_r0) - tc_r0_top_k.decode(gap_tc_r0 - 1);
+        uint64_t decode = tc_r0_top_k.decode(gap_tc_r0);
+        act_zeros = decode - prev_tunst_r0;
+        prev_tunst_r0 = decode;
         gap_tc_r0++;
       } else {
         // is in huffman
-        if(gap_huff_r0 == 0) act_zeros = huffman_r0.decode(gap_huff_r0);
-        else act_zeros = huffman_r0.decode(gap_huff_r0) - huffman_r0.decode(gap_huff_r0 - 1);
+        uint64_t decode = huffman_r0.decode(gap_huff_r0);
+        act_zeros = decode - prev_huff_r0;
+        prev_huff_r0 = decode;
         gap_huff_r0++;
       }
       pos += act_zeros;
@@ -432,13 +452,15 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
       uint64_t act_ones = 0;
       if(!tc_or_huffman_r1[gap_pos]) {
         // is in tunstall
-        if(gap_tc_r1 == 0) act_ones = tc_r1_top_k.decode(gap_tc_r1);
-        else act_ones = tc_r1_top_k.decode(gap_tc_r1) - tc_r1_top_k.decode(gap_tc_r1 - 1);
+        uint64_t decode = tc_r1_top_k.decode(gap_tc_r1);
+        act_ones = decode - prev_tunst_r1;
+        prev_tunst_r1 = decode;
         gap_tc_r1++;
       } else {
         // is in huffman
-        if(gap_huff_r1 == 0) act_ones = huffman_r1.decode(gap_huff_r1);
-        else act_ones = huffman_r1.decode(gap_huff_r1) - huffman_r1.decode(gap_huff_r1 - 1);
+        uint64_t decode = huffman_r1.decode(gap_huff_r1);
+        act_ones = decode - prev_huff_r1;
+        prev_huff_r1 = decode;
         gap_huff_r1++;
       }
       pos += act_ones;
@@ -457,12 +479,27 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
   return _ones;
 }
 
-template class RunEncoderAccess<16, 256, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 512, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 1024, 523776, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>>;
-template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
-template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
-template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
-template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
+template class RunEncoderAccess<16, 256, 32,
+                                sdsl::bit_vector,
+                                sdsl::rank_support_v5<1>,
+                                sdsl::sd_vector<>,
+                                sdsl::select_support_sd<1>,
+                                sdsl::rank_support_sd<1>>;
+template class RunEncoderAccess<16, 256, 64,
+                                sdsl::bit_vector,
+                                sdsl::rank_support_v5<1>,
+                                sdsl::sd_vector<>,
+                                sdsl::select_support_sd<1>,
+                                sdsl::rank_support_sd<1>>;
+template class RunEncoderAccess<16, 256, 128,
+                                sdsl::bit_vector,
+                                sdsl::rank_support_v5<1>,
+                                sdsl::sd_vector<>,
+                                sdsl::select_support_sd<1>,
+                                sdsl::rank_support_sd<1>>;
+//template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+//template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+//template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>>;
+//template class RunEncoderAccess<16, 256, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
+//template class RunEncoderAccess<16, 512, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
+//template class RunEncoderAccess<16, 1024, 523776, sdsl::rrr_vector<31>, sdsl::select_support_rrr<1,31>, sdsl::rank_support_rrr<1,31>>;
