@@ -440,7 +440,7 @@ uint64_t huffman_coder::decode(uint64_t i)
     uint64_t sum = block_info_prefix_sum[i/block_size];
     cur_int = block_info_starting_position[i/block_size];
     i = i - (i/block_size)*block_size;
-           
+
     buff = compressed_seq[cur_int];
     buff_btg = BUFF_BITS;
 

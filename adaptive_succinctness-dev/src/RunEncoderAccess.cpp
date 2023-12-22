@@ -315,6 +315,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::select(uint64_
   uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
   uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
 
+
   while(ones < k) {
     if(take_gr0) {
       // read from gap of run 0
@@ -355,7 +356,7 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::select(uint64_
     }
     take_gr0 = !take_gr0;
   }
-  
+
   if(ones > k) {
     pos -= ones - k;
   }

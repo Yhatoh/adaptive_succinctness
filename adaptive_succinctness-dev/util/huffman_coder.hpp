@@ -25,6 +25,8 @@ constexpr int32_t BUFF_BITS = sizeof(uint32_t) << 3; //# bits in a buffer elemen
 
 
 class huffman_coder {
+
+public:
     uint32_t cw_lens[L + 1];  // OJO cuidado con el valor de L
     /* Canonical coding arrays */
     uint32_t min_code[L];
@@ -56,7 +58,6 @@ class huffman_coder {
     void generate_mapping(uint32_t max_cw_length, uint32_t n);
     uint32_t INPUT_ULONG(uint32_t &cur_int, int32_t len);
 
-public:
     huffman_coder();
     ~huffman_coder();
     void encode(std::vector<uint32_t> &seq, uint32_t block_size);    
