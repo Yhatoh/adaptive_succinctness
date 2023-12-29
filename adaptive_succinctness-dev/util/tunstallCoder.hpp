@@ -29,6 +29,7 @@ typedef std::tuple<uint64_t, int64_t, std::string> tree_node_str;
 
 template< uint16_t w >
 class tunstall_coder {
+public:
     std::vector<std::vector<uint64_t>> D;  // Dictionary
     std::vector<uint32_t> map_table;
     //std::vector<uint16_t> compressed_seq;
@@ -47,7 +48,6 @@ class tunstall_coder {
                   std::vector<uint64_t>& currcode); 
 
     
-public:
     tunstall_coder();
     tunstall_coder(std::vector<uint32_t> &seq, uint32_t block_size, uint64_t D_size_init);
     
