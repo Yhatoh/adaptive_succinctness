@@ -352,8 +352,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     symb_r1_huff = 0;
     symb_r1_huff = huffman_r1.block_info_prefix_sum[gap_huff_r1/huffman_r1.block_size];
     cur_int_r1 = huffman_r1.block_info_starting_position[gap_huff_r1/huffman_r1.block_size];
-    i_r1 = gap_huff_r1 - (gap_huff_r1/huffman_r1.block_size)*huffman_r1.block_size;
-
     huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
     huffman_r1.buff_btg = BUFF_BITS;
 
@@ -388,10 +386,43 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     i_r1++;
   }
 
-  // cuidado cuando el gap_huff_r0 == 0
-  uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
+  uint64_t i_r1_tunst = gap_tc_r1;
+  uint64_t b_, p, block_sum, symb_r1_tunst;
+  uint64_t read_D;
+  if(gap_tc_r1 == 0) {
+    symb_r1_tunst = 0;
+    block_sum = symb_r1_tunst = tc_r1_top_k.block[b_].prefix_sum;
+    p = tc_r1_top_k.block[b_].starting_position;
+    read_D = 0;
+  } else {
+    i_r1_tunst--;
+    b_ = i_r1_tunst / tc_r1_top_k.bSize;
 
-  uint64_t symb_r1_tunst = prev_tunst_r1;
+    symb_r1_tunst = tc_r1_top_k.block[b_].prefix_sum;
+    block_sum = symb_r1_tunst;
+    p = tc_r1_top_k.block[b_].starting_position;
+
+    uint64_t j, size, nDecode = i_r1_tunst % tc_r1_top_k.bSize + 1;
+    i_r1_tunst = i_r1_tunst % tc_r1_top_k.bSize;
+
+    read_D = 0;
+    for (j = 0; j <= nDecode; ++p) {
+      size = tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]].size();
+      if (j + size < nDecode) {
+        symb_r1_tunst += tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]][size - 1];
+        block_sum += tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]][size - 1];
+        j += size;
+      } else {
+        symb_r1_tunst += tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]][nDecode - j - 1];
+        read_D = nDecode - j - 1 + 1;
+        break;
+      }
+    }
+    i_r1_tunst++;
+  }
+  // cuidado cuando el gap_huff_r0 == 0
+  //uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
+
   while(symb_r1_tunst + symb_r1_huff < k) {
     // read from gap of run 1
     uint64_t act_ones = 0;
@@ -443,10 +474,33 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       // is in tunstall
       flag_acum_r1 = true;
 
+      if(i_r1_tunst >= tc_r1_top_k.bSize) {
+        b_ = gap_tc_r1 / tc_r1_top_k.bSize;
+        symb_r1_tunst = block_sum = tc_r1_top_k.block[b_].prefix_sum;
+        p = tc_r1_top_k.block[b_].starting_position;
+        read_D = 0;
+        i_r1_tunst = gap_tc_r1 % tc_r1_top_k.bSize;
+      }
+//      debug(i_r1_tunst);
+//      debug(symb_r1_tunst);
+//      debug(p);
+//      debug(read_D);
+//      debug(tc_r1_top_k.compressed_seq.size());
+//      debug(tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]].size());
+      if(read_D == tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]].size()) {
+        block_sum += tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]][tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]].size() - 1];
+        p++;
+        read_D = 0;
+      }
+      symb_r1_tunst = block_sum + tc_r1_top_k.D[tc_r1_top_k.compressed_seq[p]][read_D++];
+      i_r1_tunst++;
+
+      /*
       uint64_t decode = tc_r1_top_k.decode(gap_tc_r1);
       act_ones = decode - prev_tunst_r1;
       prev_tunst_r1 = decode;
       symb_r1_tunst += act_ones;
+      */
 
       gap_tc_r1++;
       prev_r1++;
