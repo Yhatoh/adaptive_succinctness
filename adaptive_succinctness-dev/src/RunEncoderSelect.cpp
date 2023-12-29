@@ -83,10 +83,14 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   std::cerr << "Calculating Gaps R0..." << std::endl;
   //GapsR0[0] = PB_R0[0] - 1;
   GapsR0[0] = PB_R0[0];
+  uint32_t maxi = PB_R0[0];
   for(uint64_t i = 1; i < GapsR0.size(); i++) {
     //GapsR0[i] = PB_R0[i] - PB_R0[i - 1] - 1;
     GapsR0[i] = PB_R0[i] - PB_R0[i - 1];
+    maxi = max(GapsR0[i], maxi);
   }
+
+  std::cerr << "Max value gap R0 " << maxi << std::endl;
 
   std::cerr << "Creatings blocks of R0..." << std::endl;
   std::vector< uint64_t > br_R0;
@@ -107,11 +111,14 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   std::cerr << "Calculating Gaps R1..." << std::endl;
   //GapsR1[0] = PB_R1[0] - 1;
   GapsR1[0] = PB_R1[0];
+  uint32_t maxi_ = PB_R1[0];
   for(uint64_t i = 1; i < GapsR1.size(); i++) {
     //GapsR1[i] = PB_R1[i] - PB_R1[i - 1] - 1;
     GapsR1[i] = PB_R1[i] - PB_R1[i - 1];
+    maxi_ = max(maxi_, GapsR1[i]);
   } 
 
+  std::cerr << "Max value gap R0 " << maxi << std::endl;
   std::cerr << "Creatings blocks of R1..." << std::endl;
   std::vector< uint64_t > br_R1;
   for(i = br; i <= PB_R1.size(); i += br) {
@@ -358,11 +365,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     one_r0++;
   }
-#ifdef SPLIT_TIME
-  block_stop = chrono::high_resolution_clock::now();
-  block_time = chrono::duration_cast< chrono::microseconds >(block_stop - block_start);
-  block_total_time += block_time.count();
-#endif
+
   uint32_t n_decoded_r0, cur_int_r0;
   uint32_t code_r0 = 0;
   uint32_t bits_needed_r0 = sizeof(uint32_t) << 3;

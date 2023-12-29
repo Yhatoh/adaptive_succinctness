@@ -357,6 +357,11 @@ uint64_t RunEncoderAccess<w,bs,br,_bv,_rank,_bv2,_select,_rank2>::select(uint64_
     take_gr0 = !take_gr0;
   }
 
+  debug(prev_huff_r0);
+  debug(prev_tunst_r0);
+  debug(prev_huff_r1);
+  debug(prev_tunst_r1);
+
   if(ones > k) {
     pos -= ones - k;
   }
