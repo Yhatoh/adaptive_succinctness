@@ -304,27 +304,14 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   uint64_t gap_huff_r1 = 0;
   
   if(block > 0) {
-    // ones and zeros until block
-
     // curr gap pos
     gap_pos = block * br + 1;
 
     // actual gaps in each structure
-    /*
-    if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
-    else gap_huff_r0 = n_tchuff_r0;
-    gap_tc_r0 = gap_pos - gap_huff_r0;
-    one_r0 = gap_huff_r0; // are the same value in this point
-    */
-
     if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
     else gap_huff_r1 = n_tchuff_r1;
     gap_tc_r1 = gap_pos - gap_huff_r1;
     one_r1 = gap_huff_r1; // are the same value in this point
-
-    // pos before block
-    pos += zeros;
-    pos += ones;
   }
 
   bool flag_acum_r0 = false;
@@ -349,76 +336,8 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       prev_r1 = gap_pos - 1;
     }
     one_r1++;
-
-    /*
-    if(one_r0 >= 1) {
-      prev_r0 = select_tchuff_r0(one_r0);
-      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
-      if(one_r0 + 1 > n_tchuff_r0 || prev_r0 + 1 != res_select_r0) {
-        flag_acum_r0 = true;
-        prev_r0 = gap_pos - 1;
-        if(prev_r0 + 1 == res_select_r0) flag_acum_r0 = false;
-      }
-    } else {
-      if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
-      flag_acum_r0 = true;
-      prev_r0 = gap_pos - 1;
-    }
-    one_r0++;
-    */
   }
 
-  /*
-  uint32_t n_decoded_r0, cur_int_r0;
-  uint32_t code_r0 = 0;
-  uint32_t bits_needed_r0 = sizeof(uint32_t) << 3;
-  uint32_t currcode_r0;
-  uint32_t currlen_r0 = sizeof(uint32_t) << 3;
-  uint32_t* lj_r0;
-  uint32_t* start_linear_search_r0 = huffman_r0.lj_base + max(LUT_BITS, huffman_r0.min_cw_len) - 1;
-
-  uint64_t symb_r0_huff;
-  uint64_t i_r0 = gap_huff_r0;
-  if(gap_huff_r0 == 0) {
-    symb_r0_huff = 0;
-    symb_r0_huff = huffman_r0.block_info_prefix_sum[gap_huff_r0/huffman_r0.block_size];
-    cur_int_r0 = huffman_r0.block_info_starting_position[gap_huff_r0/huffman_r0.block_size];
-    i_r0 = gap_huff_r0 - (gap_huff_r0/huffman_r0.block_size)*huffman_r0.block_size;
-
-    huffman_r0.buff = huffman_r0.compressed_seq[cur_int_r0];
-    huffman_r0.buff_btg = BUFF_BITS;
-
-  } else {
-    i_r0--;
-    symb_r0_huff = huffman_r0.block_info_prefix_sum[i_r0/huffman_r0.block_size];
-    cur_int_r0 = huffman_r0.block_info_starting_position[i_r0/huffman_r0.block_size];
-    i_r0 = i_r0 - (i_r0/huffman_r0.block_size)*huffman_r0.block_size;
-
-    huffman_r0.buff = huffman_r0.compressed_seq[cur_int_r0];
-    huffman_r0.buff_btg = BUFF_BITS;
-
-    for (n_decoded_r0 = 0; n_decoded_r0 <= i_r0; ++n_decoded_r0) {
-      code_r0 |= huffman_r0.INPUT_ULONG(cur_int_r0, bits_needed_r0);
-
-      lj_r0 = huffman_r0.lut[code_r0 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
-      if (lj_r0 == NULL)
-        for (lj_r0 = start_linear_search_r0; code_r0 < *lj_r0; lj_r0++)
-          ;
-      currlen_r0 = lj_r0 - huffman_r0.lj_base + 1;
-
-      // calculate symbol number
-      currcode_r0 = code_r0 >> ((sizeof(uint32_t) << 3) - currlen_r0);
-      currcode_r0 -= huffman_r0.min_code[currlen_r0 - 1];
-      currcode_r0 += huffman_r0.offset[currlen_r0 - 1];
-
-      symb_r0_huff += huffman_r0.syms[currcode_r0]-1;
-
-      code_r0 <<= currlen_r0;
-      bits_needed_r0 = currlen_r0;
-    }
-    i_r0++;
-  }
-  */
   uint32_t n_decoded_r1, cur_int_r1;
   uint32_t code_r1 = 0;
   uint32_t bits_needed_r1 = sizeof(uint32_t) << 3;
@@ -470,139 +389,71 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   }
 
   // cuidado cuando el gap_huff_r0 == 0
-  //uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
   uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
 
   uint64_t symb_r1_tunst = prev_tunst_r1;
-  //uint64_t symb_r0_tunst = prev_tunst_r0;
   while(symb_r1_tunst + symb_r1_huff < k) {
-    /*
-    if(take_gr0) {
-      // read from gap of run 0
-      uint64_t act_zeros = 0;
-      if(!flag_acum_r0 && one_r0 <= n_tchuff_r0)
-        res_select_r0 = select_tchuff_r0(one_r0);
-      else if(one_r0 > n_tchuff_r0) flag_acum_r0 = true;
+    // read from gap of run 1
+    uint64_t act_ones = 0;
 
-      if(!flag_acum_r0 && res_select_r0 == prev_r0 + 1) {
-        if(i_r0 >= huffman_r0.block_size) {
-          code_r0 = 0;
-          bits_needed_r0 = sizeof(uint32_t) << 3;
-          currlen_r0 = sizeof(uint32_t) << 3;
-          start_linear_search_r0 = huffman_r0.lj_base + max(LUT_BITS, huffman_r0.min_cw_len) - 1;
+    if(!flag_acum_r1 && one_r1 <= n_tchuff_r1)
+      res_select_r1 = select_tchuff_r1(one_r1);
+    else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
 
-          symb_r0_huff = huffman_r0.block_info_prefix_sum[gap_huff_r0/huffman_r0.block_size];
-          cur_int_r0 = huffman_r0.block_info_starting_position[gap_huff_r0/huffman_r0.block_size];
-          i_r0 = gap_huff_r0 - (gap_huff_r0/huffman_r0.block_size)*huffman_r0.block_size;
+    if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
+      if(i_r1 >= huffman_r1.block_size) {
+        code_r1 = 0;
+        bits_needed_r1 = sizeof(uint32_t) << 3;
+        currlen_r1 = sizeof(uint32_t) << 3;
+        start_linear_search_r1 = huffman_r1.lj_base + max(LUT_BITS, huffman_r1.min_cw_len) - 1;
 
-          huffman_r0.buff = huffman_r0.compressed_seq[cur_int_r0];
-          huffman_r0.buff_btg = BUFF_BITS;
-        }
-        code_r0 |= huffman_r0.INPUT_ULONG(cur_int_r0, bits_needed_r0);
+        symb_r1_huff = huffman_r1.block_info_prefix_sum[gap_huff_r1/huffman_r1.block_size];
+        cur_int_r1 = huffman_r1.block_info_starting_position[gap_huff_r1/huffman_r1.block_size];
+        i_r1 = gap_huff_r1 - (gap_huff_r1/huffman_r1.block_size)*huffman_r1.block_size;
 
-        lj_r0 = huffman_r0.lut[code_r0 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
-        if (lj_r0 == NULL)
-          for (lj_r0 = start_linear_search_r0; code_r0 < *lj_r0; lj_r0++)
-            ;
-        currlen_r0 = lj_r0 - huffman_r0.lj_base + 1;
-
-        // calculate symbol number
-        currcode_r0 = code_r0 >> ((sizeof(uint32_t) << 3) - currlen_r0);
-        currcode_r0 -= huffman_r0.min_code[currlen_r0 - 1];
-        currcode_r0 += huffman_r0.offset[currlen_r0 - 1];
-
-        symb_r0_huff += huffman_r0.syms[currcode_r0]-1;
-
-        code_r0 <<= currlen_r0;
-        bits_needed_r0 = currlen_r0;
-
-        i_r0++;
-        gap_huff_r0++;
-        one_r0++;
-        prev_r0 = res_select_r0;
-
-      } else {
-
-        // is in tunstall
-        flag_acum_r0 = true;
-
-        uint64_t decode = tc_r0_top_k.decode(gap_tc_r0);
-        act_zeros = decode - prev_tunst_r0;
-        prev_tunst_r0 = decode;
-
-        symb_r0_tunst += act_zeros;
-        gap_tc_r0++;
-        prev_r0++;
-        if(prev_r0 + 1 == res_select_r0)
-          flag_acum_r0 = false;
+        huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
+        huffman_r1.buff_btg = BUFF_BITS;
       }
+      code_r1 |= huffman_r1.INPUT_ULONG(cur_int_r1, bits_needed_r1);
+
+      lj_r1 = huffman_r1.lut[code_r1 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
+      if (lj_r1 == NULL)
+        for (lj_r1 = start_linear_search_r1; code_r1 < *lj_r1; lj_r1++)
+          ;
+      currlen_r1 = lj_r1 - huffman_r1.lj_base + 1;
+
+      // calculate symbol number
+      currcode_r1 = code_r1 >> ((sizeof(uint32_t) << 3) - currlen_r1);
+      currcode_r1 -= huffman_r1.min_code[currlen_r1 - 1];
+      currcode_r1 += huffman_r1.offset[currlen_r1 - 1];
+
+      symb_r1_huff += huffman_r1.syms[currcode_r1]-1;
+
+      code_r1 <<= currlen_r1;
+      bits_needed_r1 = currlen_r1;
+
+      i_r1++;
+
+      gap_huff_r1++;
+      one_r1++;
+      prev_r1 = res_select_r1;
+
     } else {
-    */
-      // read from gap of run 1
-      uint64_t act_ones = 0;
 
-      if(!flag_acum_r1 && one_r1 <= n_tchuff_r1)
-        res_select_r1 = select_tchuff_r1(one_r1);
-      else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
+      // is in tunstall
+      flag_acum_r1 = true;
 
-      if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
-        if(i_r1 >= huffman_r1.block_size) {
-          code_r1 = 0;
-          bits_needed_r1 = sizeof(uint32_t) << 3;
-          currlen_r1 = sizeof(uint32_t) << 3;
-          start_linear_search_r1 = huffman_r1.lj_base + max(LUT_BITS, huffman_r1.min_cw_len) - 1;
+      uint64_t decode = tc_r1_top_k.decode(gap_tc_r1);
+      act_ones = decode - prev_tunst_r1;
+      prev_tunst_r1 = decode;
+      symb_r1_tunst += act_ones;
 
-          symb_r1_huff = huffman_r1.block_info_prefix_sum[gap_huff_r1/huffman_r1.block_size];
-          cur_int_r1 = huffman_r1.block_info_starting_position[gap_huff_r1/huffman_r1.block_size];
-          i_r1 = gap_huff_r1 - (gap_huff_r1/huffman_r1.block_size)*huffman_r1.block_size;
-
-          huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
-          huffman_r1.buff_btg = BUFF_BITS;
-        }
-        code_r1 |= huffman_r1.INPUT_ULONG(cur_int_r1, bits_needed_r1);
-
-        lj_r1 = huffman_r1.lut[code_r1 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
-        if (lj_r1 == NULL)
-          for (lj_r1 = start_linear_search_r1; code_r1 < *lj_r1; lj_r1++)
-            ;
-        currlen_r1 = lj_r1 - huffman_r1.lj_base + 1;
-
-        // calculate symbol number
-        currcode_r1 = code_r1 >> ((sizeof(uint32_t) << 3) - currlen_r1);
-        currcode_r1 -= huffman_r1.min_code[currlen_r1 - 1];
-        currcode_r1 += huffman_r1.offset[currlen_r1 - 1];
-
-        symb_r1_huff += huffman_r1.syms[currcode_r1]-1;
-
-        code_r1 <<= currlen_r1;
-        bits_needed_r1 = currlen_r1;
-
-        i_r1++;
-
-        gap_huff_r1++;
-        one_r1++;
-        prev_r1 = res_select_r1;
-
-      } else {
-
-        // is in tunstall
-        flag_acum_r1 = true;
-
-        uint64_t decode = tc_r1_top_k.decode(gap_tc_r1);
-        act_ones = decode - prev_tunst_r1;
-        prev_tunst_r1 = decode;
-        symb_r1_tunst += act_ones;
-
-        gap_tc_r1++;
-        prev_r1++;
-        if(prev_r1 + 1 == res_select_r1)
-          flag_acum_r1 = false;
-      }
-      gap_pos++;
-      /*
+      gap_tc_r1++;
+      prev_r1++;
+      if(prev_r1 + 1 == res_select_r1)
+        flag_acum_r1 = false;
     }
-    take_gr0 = !take_gr0;
-    */
+    gap_pos++;
   }
 
   if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
