@@ -305,8 +305,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   
   if(block > 0) {
     // ones and zeros until block
-    //ones = select_block_r1(block);
-    //zeros = select_block_r0(block);
 
     // curr gap pos
     gap_pos = block * br + 1;
@@ -366,6 +364,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     one_r0++;
   }
 
+  /*
   uint32_t n_decoded_r0, cur_int_r0;
   uint32_t code_r0 = 0;
   uint32_t bits_needed_r0 = sizeof(uint32_t) << 3;
@@ -415,6 +414,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     i_r0++;
   }
+  */
   uint32_t n_decoded_r1, cur_int_r1;
   uint32_t code_r1 = 0;
   uint32_t bits_needed_r1 = sizeof(uint32_t) << 3;
@@ -466,12 +466,13 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   }
 
   // cuidado cuando el gap_huff_r0 == 0
-  uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  //uint64_t prev_tunst_r0 = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
   uint64_t prev_tunst_r1 = (gap_tc_r1 == 0 ? 0 : tc_r1_top_k.decode(gap_tc_r1 - 1));
 
   uint64_t symb_r1_tunst = prev_tunst_r1;
-  uint64_t symb_r0_tunst = prev_tunst_r0;
+  //uint64_t symb_r0_tunst = prev_tunst_r0;
   while(symb_r1_tunst + symb_r1_huff < k) {
+    /*
     if(take_gr0) {
       // read from gap of run 0
       uint64_t act_zeros = 0;
@@ -532,6 +533,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
           flag_acum_r0 = false;
       }
     } else {
+    */
       // read from gap of run 1
       uint64_t act_ones = 0;
 
@@ -593,10 +595,18 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
           flag_acum_r1 = false;
       }
       gap_pos++;
+      /*
     }
     take_gr0 = !take_gr0;
+    */
   }
 
+  if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
+  else gap_huff_r0 = n_tchuff_r0;
+  gap_tc_r0 = gap_pos - gap_huff_r0;
+
+  uint64_t symb_r0_huff = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  uint64_t symb_r0_tunst = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
   pos = symb_r0_huff + symb_r0_tunst + symb_r1_huff + symb_r1_tunst;
 
   if(symb_r1_huff + symb_r1_tunst > k) {
