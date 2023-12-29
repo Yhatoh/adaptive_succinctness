@@ -310,10 +310,12 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     gap_pos = block * br + 1;
 
     // actual gaps in each structure
+    /*
     if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
     else gap_huff_r0 = n_tchuff_r0;
     gap_tc_r0 = gap_pos - gap_huff_r0;
     one_r0 = gap_huff_r0; // are the same value in this point
+    */
 
     if(gap_pos <= rank_tchuff_r1.size()) gap_huff_r1 = rank_tchuff_r1(gap_pos);
     else gap_huff_r1 = n_tchuff_r1;
@@ -348,6 +350,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     one_r1++;
 
+    /*
     if(one_r0 >= 1) {
       prev_r0 = select_tchuff_r0(one_r0);
       if(one_r0 + 1 <= n_tchuff_r0) res_select_r0 = select_tchuff_r0(one_r0 + 1);
@@ -362,6 +365,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
       prev_r0 = gap_pos - 1;
     }
     one_r0++;
+    */
   }
 
   /*
