@@ -23,14 +23,14 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(sdsl::bit_vector &
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k) {
   top_most_freq = top_k;
-  std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
+  ////std::cerr << "Receiving a vector of " << pb.size() << " elements..." << std::endl;
 
-  std::cerr << "Calculating Runs..." << std::endl;
+  ////std::cerr << "Calculating Runs..." << std::endl;
   
   n = pb.size();
   u = pb[pb.size() - 1] + 1;
 
-  std::cerr << "Creating sets R0 and R1..." << std::endl;
+  ////std::cerr << "Creating sets R0 and R1..." << std::endl;
   std::vector< uint64_t > R0;
   std::vector< uint64_t > R1;
 
@@ -47,13 +47,13 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
 
   R1.push_back(pb[pb.size() - 1] + 1 - last + 1);
 
-  std::cerr << "Creating bit_vectors..." << std::endl;
+  ////std::cerr << "Creating bit_vectors..." << std::endl;
   std::vector< uint64_t > PB_R0(R0.size(), 0);
 
   PB_R0[0] = R0[0];
-  //std::cerr << "R0: " << R0[0] << " ";
+  //////std::cerr << "R0: " << R0[0] << " ";
   for(uint64_t i = 1; i < R0.size(); i++) {
-    //std::cerr << R0[i] << " ";
+    //////std::cerr << R0[i] << " ";
     PB_R0[i] = R0[i] + PB_R0[i - 1];
   }
 
@@ -62,9 +62,9 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   std::vector< uint64_t > PB_R1(R1.size(), 0);
 
   PB_R1[0] = R1[0];
-  //std::cerr << "R1: " << R1[0] << " ";
+  //////std::cerr << "R1: " << R1[0] << " ";
   for(uint64_t i = 1; i < R1.size(); i++) {
-    //std::cerr << R1[i] << " ";
+    //////std::cerr << R1[i] << " ";
     PB_R1[i] = R1[i] + PB_R1[i - 1];
   }
 
@@ -73,34 +73,29 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   n_r0 = PB_R0.size();
   n_r1 = PB_R1.size();
 
-  std::cerr << "N R0: " << n_r0 << std::endl;
-  std::cerr << "N R1: " << n_r1 << std::endl;
+  ////std::cerr << "N R0: " << n_r0 << std::endl;
+  ////std::cerr << "N R1: " << n_r1 << std::endl;
 
-  std::cerr << "Creating gaps representation..." << std::endl; 
+  ////std::cerr << "Creating gaps representation..." << std::endl; 
   std::vector< uint32_t > GapsR0(PB_R0.size(), 0);
   std::vector< uint32_t > GapsR1(PB_R1.size(), 0);
 
-  std::cerr << "Calculating Gaps R0..." << std::endl;
+  ////std::cerr << "Calculating Gaps R0..." << std::endl;
   //GapsR0[0] = PB_R0[0] - 1;
   GapsR0[0] = PB_R0[0];
-  uint32_t maxi = PB_R0[0];
   for(uint64_t i = 1; i < GapsR0.size(); i++) {
     //GapsR0[i] = PB_R0[i] - PB_R0[i - 1] - 1;
     GapsR0[i] = PB_R0[i] - PB_R0[i - 1];
-    maxi = max(GapsR0[i], maxi);
   }
 
-  std::cerr << "Max value gap R0 " << maxi << std::endl;
-
-  std::cerr << "Creatings blocks of R0..." << std::endl;
+  //std::cerr << "Creatings blocks of R0..." << std::endl;
   std::vector< uint64_t > br_R0;
   uint64_t i; 
-  for(i = br; i <= PB_R0.size(); i += br) {
+  for(i = br; i < PB_R0.size(); i += br) {
     br_R0.push_back(PB_R0[i]);
   }
   
-  if(PB_R0.size() % br != 0)
-    br_R0.push_back(PB_R0[PB_R0.size() - 1]);
+  if(i - br != PB_R0.size() - 1) br_R0.push_back(PB_R0[PB_R0.size() - 1]);
 
   block_r0 = _bv(br_R0.begin(), br_R0.end());
 
@@ -108,25 +103,22 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   br_R0.clear();
   PB_R0.clear();
 
-  std::cerr << "Calculating Gaps R1..." << std::endl;
+  //std::cerr << "Calculating Gaps R1..." << std::endl;
   //GapsR1[0] = PB_R1[0] - 1;
   GapsR1[0] = PB_R1[0];
-  uint32_t maxi_ = PB_R1[0];
   for(uint64_t i = 1; i < GapsR1.size(); i++) {
     //GapsR1[i] = PB_R1[i] - PB_R1[i - 1] - 1;
     GapsR1[i] = PB_R1[i] - PB_R1[i - 1];
-    maxi_ = max(maxi_, GapsR1[i]);
   } 
 
-  std::cerr << "Max value gap R0 " << maxi << std::endl;
-  std::cerr << "Creatings blocks of R1..." << std::endl;
+  ////std::cerr << "Max value gap R0 " << maxi << std::endl;
+  ////std::cerr << "Creatings blocks of R1..." << std::endl;
   std::vector< uint64_t > br_R1;
-  for(i = br; i <= PB_R1.size(); i += br) {
+  for(i = br; i < PB_R1.size(); i += br) {
     br_R1.push_back(PB_R1[i]);
   }
   
-  if(PB_R1.size() % br != 0)
-    br_R1.push_back(PB_R1[PB_R1.size() - 1]);
+  if(i - br != PB_R1.size() - 1) br_R1.push_back(PB_R1[PB_R1.size() - 1]);
  
   block_r1 = _bv(br_R1.begin(), br_R1.end());
 
@@ -139,8 +131,8 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   sdsl::util::init_support(select_block_r1, &block_r1);
   sdsl::util::init_support(rank_block_r1, &block_r1);
 
-  //std::cerr << "Creating Tunstall..." << std::endl;
-  std::cerr << "Creating Top-k Encoding..." << std::endl;
+  //////std::cerr << "Creating Tunstall..." << std::endl;
+  ////std::cerr << "Creating Top-k Encoding..." << std::endl;
   top_k_encoding(GapsR0, false);
   top_k_encoding(GapsR1, true);
 
@@ -149,7 +141,7 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
   sdsl::util::init_support(select_tchuff_r0, &tc_or_huffman_r0);
   sdsl::util::init_support(select_tchuff_r1, &tc_or_huffman_r1);
 
-  std::cerr << "Done..." << std::endl;
+  ////std::cerr << "Done..." << std::endl;
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
@@ -166,7 +158,7 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::get_runs(std::vector<uint6
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
 void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
-  //std::cerr << "Creating frequency map..." << std::endl;
+  //////std::cerr << "Creating frequency map..." << std::endl;
   std::map< uint32_t, uint64_t > freq_map;
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(freq_map.count(seq[i]) == 0) 
@@ -174,16 +166,16 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
     else
       freq_map[seq[i]] += 1;
   }
-  //std::cerr << "Done..." << std::endl;
-  //std::cerr << "Creating priority queue..." << std::endl;
+  //////std::cerr << "Done..." << std::endl;
+  //////std::cerr << "Creating priority queue..." << std::endl;
 
   std::priority_queue< std::pair< uint32_t, uint64_t > > pq;
   for(std::map< uint32_t, uint64_t >::iterator it = freq_map.begin(); it != freq_map.end(); it++) {
     pq.push(std::pair< uint64_t, uint32_t >(it->second, it->first));
   }
 
-  //std::cerr << "Done..." << std::endl;
-  //std::cerr << "Tunstall alphabet..." << std::endl;
+  //////std::cerr << "Done..." << std::endl;
+  //////std::cerr << "Tunstall alphabet..." << std::endl;
 
   std::set< uint32_t > tc_alphabet;
   for(uint64_t i = 0; i < top_most_freq; i++) {
@@ -191,8 +183,8 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
     pq.pop();
   }
 
-  //std::cerr << "Done..." << std::endl;
-  //std::cerr << "Filling bitvector..." << std::endl;
+  //////std::cerr << "Done..." << std::endl;
+  //////std::cerr << "Filling bitvector..." << std::endl;
 
   std::vector< uint64_t > tc_or_huff_seq;
 
@@ -208,6 +200,7 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
     }
   }
  
+  ////std::cerr << "Create Bit Vector..." << std::endl;
   if(type) {
     n_tchuff_r1 = tc_or_huff_seq.size();
     tc_or_huffman_r1 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
@@ -216,10 +209,10 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
     tc_or_huffman_r0 = _bv(tc_or_huff_seq.begin(), tc_or_huff_seq.end());
   }
 
-  //std::cerr << "Done..." << std::endl;
-  //std::cerr << "Creating tunstall and huffman..." << std::endl;
-  std::cerr << "Percentage of symbols in Tunstall sequence: " << (double)tc_seq.size() / seq.size() << std::endl;
-  std::cerr << tc_seq.size() << " " << hf_seq.size() << "\n";
+  //////std::cerr << "Done..." << std::endl;
+  //////std::cerr << "Creating tunstall and huffman..." << std::endl;
+  ////std::cerr << "Percentage of symbols in Tunstall sequence: " << (double)tc_seq.size() / seq.size() << std::endl;
+  ////std::cerr << tc_seq.size() << " " << hf_seq.size() << "\n";
   symbol_tc_p = (double)tc_seq.size() / seq.size() ;
 
   // r1
@@ -231,7 +224,7 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
     tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w); 
     huffman_r0.encode(hf_seq, bs);
   }
-  //std::cerr << "Done..." << std::endl;
+  //////std::cerr << "Done..." << std::endl;
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
@@ -718,9 +711,11 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
 
 template class RunEncoderSelect<16, 256, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 template class RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 128, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
