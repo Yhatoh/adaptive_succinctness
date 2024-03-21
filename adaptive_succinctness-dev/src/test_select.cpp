@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/coder_elias_delta.hpp>
+#include <sdsl/io.hpp>
 #include <sdsl/vectors.hpp>
 #include <vector>
 #include <string>
@@ -8,7 +9,7 @@
 #include <chrono>
 
 #include "RunEncoderSelect.hpp"
-#include "RunEncoderAccess.hpp"
+//#include "RunEncoderAccess.hpp"
 #include "randomer.hpp"
 
 #define n_queries 1000000
@@ -17,19 +18,19 @@
 
 using namespace std;
 
-typedef RunEncoderSelect<16, 256, 32,
-                         sdsl::sd_vector<>, sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_256_sd_32;
-typedef RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>,
+//typedef RunEncoderSelect<16, 256, 32,
+//                         sdsl::sd_vector<>, sdsl::select_support_sd<1>,
+//                         sdsl::rank_support_sd<1>> res_256_sd_32;
+typedef RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>,
                          sdsl::select_support_sd<1>,
                          sdsl::rank_support_sd<1>> res_256_sd_64;
 
-typedef RunEncoderAccess<16, 256, 64,
-                         sdsl::bit_vector,
-                         sdsl::rank_support_v5<1>,
-                         sdsl::sd_vector<>,
-                         sdsl::select_support_sd<1>,
-                         sdsl::rank_support_sd<1>> res_256_access_64;
+//typedef RunEncoderAccess<16, 256, 64,
+//                         sdsl::bit_vector,
+//                         sdsl::rank_support_v5<1>,
+//                         sdsl::sd_vector<>,
+//                         sdsl::select_support_sd<1>,
+//                         sdsl::rank_support_sd<1>> res_256_access_64;
 /*
 typedef RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>,
                          sdsl::select_support_sd<1>,
@@ -46,8 +47,10 @@ typedef RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>,
 //typedef RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> res_512_sd;
 //typedef RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> res_1024_sd;
 
-void print_info(string type, uint64_t blockcode, uint64_t blockprefix, uint64_t k, double size, double size_per_one, double size_per_bit,
-                uint64_t q_rank, double time_rank, uint64_t q_select, double time_select) {
+void print_info(string type, uint64_t blockcode, uint64_t blockprefix,
+                uint64_t k, double size, double size_per_one,
+                double size_per_bit, uint64_t q_rank, double time_rank,
+                uint64_t q_select, double time_select) {
   cout << "RUN " << type << endl;
   cout << "PARAMS: block code = " << blockcode << ", block prefix =  " << blockprefix << ", k = " << k << endl;
   cout << "  SIZE INFO: total = " << size << ", per one = " << size_per_one << ", per bit = " << size_per_bit << endl;
@@ -56,6 +59,15 @@ void print_info(string type, uint64_t blockcode, uint64_t blockprefix, uint64_t 
   cout << "    SELECT: " << q_select << " time in microsecond = " << time_select << endl;
 }
 
+void print_info(string type, double size, double size_per_one,
+                double size_per_bit, uint64_t q_rank, double time_rank,
+                uint64_t q_select, double time_select) {
+  cout << type << "\n";
+  cout << "  SIZE INFO: total = " << size << ", per one = " << size_per_one << ", per bit = " << size_per_bit << endl;
+  cout << "  TIME INFO:" << endl;
+  cout << "    RANK: " << q_rank << " time in microsecond = " << time_rank << endl;
+  cout << "    SELECT: " << q_select << " time in microsecond = " << time_select << endl;
+}
 int main() {
   std::vector<uint64_t> seq;
   //std::ifstream rf("/data/bitvectors/ii/gov2/url/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
@@ -72,7 +84,8 @@ int main() {
   std::cerr << "Done reading file..." << std::endl;
   rf.close();
 
-  cout << seq.size() << "\n";
+  std::cerr << "Amount of 1's: " << seq.size() << "\n";
+  std::cerr << "Universe: " << seq.back() + 1 << "\n";
   sdsl::bit_vector bv(seq[seq.size() - 1] + 1, 0);
   //sdsl::bit_vector bv(U, 0);
   for(auto bit : seq) bv[bit] = 1;
@@ -90,6 +103,7 @@ int main() {
     vrank.push_back(r_randomer());
     vselect.push_back(s_randomer());
   }
+  /*
   {
     sdsl::sd_vector<> sd(bv);
     sdsl::rank_support_sd<1> rank_sd(&sd);
@@ -105,7 +119,6 @@ int main() {
     stop = chrono::high_resolution_clock::now();
     time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
     total_time = time_span.count();
-    cout << "SD RANK: " << total_time * 1000000 / n_queries << " " << total_time << " " << Q << endl;
     chrono::high_resolution_clock::time_point start_s, stop_s;
     double total_time_s = 0;
     chrono::duration< double > time_span_s;
@@ -117,85 +130,12 @@ int main() {
     stop_s = chrono::high_resolution_clock::now();
     time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
     total_time_s = time_span_s.count();
-    cout << "SD SELECT: " << Q_s << " " << total_time_s * 1000000 / n_queries << " " << total_time_s << endl;
-  }
-  std::vector< uint64_t > ks = {64};//{4, 8, 16, 32, 64};
-  /*
-  {
-    for(uint64_t k : ks) {
-      res_256_access_64 run(seq, k);
-
-      chrono::high_resolution_clock::time_point start, stop;
-      double total_time = 0;
-      chrono::duration< double > time_span;
-      uint64_t q = 0;
-      start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vrank.size(); i++){
-        q += run.rank(vrank[i]);
-      }
-      stop = chrono::high_resolution_clock::now();
-      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-      total_time = time_span.count();
-
-
-      chrono::high_resolution_clock::time_point start_s, stop_s;
-      double total_time_s = 0;
-      chrono::duration< double > time_span_s;
-      uint64_t q_s = 0;
-      start_s = chrono::high_resolution_clock::now();
-      //for(uint64_t i = 0; i < vselect.size(); i++){
-      //  q_s += run.select(vselect[i]);
-      //}
-      cout << run.select(1344969344) << "\n";
-      stop_s = chrono::high_resolution_clock::now();
-      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-      total_time_s = time_span_s.count();
-
-      print_info("ACCESS", 256, 64, k,
-                 run.bits_tunstall_seq(),
-                 (double) run.bits_tunstall_seq() / seq.size(),
-                 (double) run.bits_tunstall_seq() / seq[seq.size() - 1] + 1,
-                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-    }
+    uint64_t total_size = sdsl::size_in_bytes(sd) + sdsl::size_in_bytes(rank_sd) + sdsl::size_in_bytes(select_sd);
+    print_info("SD VECTOR", total_size, (double) total_size / seq.size(), (double) total_size / (seq.back() + 1),
+               Q, (double) total_time * 1000000 / n_queries, Q_s, (double) total_time_s * 1000000 / n_queries);
   }
   */
-//  {
-//    for(uint64_t k : ks) {
-//      res_256_sd_32 run(seq, k);
-//
-//      chrono::high_resolution_clock::time_point start, stop;
-//      double total_time = 0;
-//      chrono::duration< double > time_span;
-//      uint64_t q = 0;
-//      start = chrono::high_resolution_clock::now();
-//      /*
-//      for(uint64_t i = 0; i < vrank.size(); i++){
-//        q += run.rank(vrank[i]);
-//      }
-//      */
-//      stop = chrono::high_resolution_clock::now();
-//      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-//      total_time = time_span.count();
-//
-//
-//      chrono::high_resolution_clock::time_point start_s, stop_s;
-//      double total_time_s = 0;
-//      chrono::duration< double > time_span_s;
-//      uint64_t q_s = 0;
-//      start_s = chrono::high_resolution_clock::now();
-//      for(uint64_t i = 0; i < vselect.size(); i++){
-//        q_s += run.select(vselect[i]);
-//      }
-//      stop_s = chrono::high_resolution_clock::now();
-//      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-//      total_time_s = time_span_s.count();
-//
-//      print_info("SELECT", 256, 32, k, run.bits_tunstall_seq(),
-//                 (double) run.bits_tunstall_seq() / seq.size(),
-//                 (double) run.bits_tunstall_seq() / seq[seq.size() - 1] + 1,
-//                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-//    }
-//  }
+  std::vector< uint64_t > ks = {64};//{4, 8, 16, 32, 64}; 
   {
     for(uint64_t k : ks) {
       res_256_sd_64 run(seq, k);
@@ -232,292 +172,9 @@ int main() {
 
       print_info("SELECT", 256, 64, k, run.bits_tunstall_seq(),
                  (double) run.bits_tunstall_seq() / seq.size(),
-                 (double) run.bits_tunstall_seq() / seq[seq.size() - 1],
+                 (double) run.bits_tunstall_seq() / (seq.back() + 1),
                  q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
     }
   }
-  /*
-  {
-    for(uint64_t k : ks) {
-      res_256_sd_128 run(seq, k);
-
-      chrono::high_resolution_clock::time_point start, stop;
-      double total_time = 0;
-      chrono::duration< double > time_span;
-      uint64_t q = 0;
-      start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < n_queries; i++){
-        q += run.rank(vrank[i]);
-      }
-      stop = chrono::high_resolution_clock::now();
-      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-      total_time = time_span.count();
-
-      chrono::high_resolution_clock::time_point start_s, stop_s;
-      double total_time_s = 0;
-      chrono::duration< double > time_span_s;
-      uint64_t q_s = 0;
-      start_s = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vselect.size(); i++){
-        q_s += run.select(vselect[i]);
-      }
-      stop_s = chrono::high_resolution_clock::now();
-      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-      total_time_s = time_span_s.count();
-
-      print_info(256, 128, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
-                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-
-      cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
-      cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
-      cout << "HUFFMAN TIME " << huff_total_time * 1000000 / n_queries << "\n";
-      cout << "SELECT TIME " << select_total_time * 1000000 / n_queries << "\n";
-      block_total_time = 0;
-      tunst_total_time = 0;
-      huff_total_time = 0;
-      select_total_time = 0;
-    }
-  }
-  {
-    for(uint64_t k : ks) {
-      res_256_sd_256 run(seq, k);
-
-      chrono::high_resolution_clock::time_point start, stop;
-      double total_time = 0;
-      chrono::duration< double > time_span;
-      uint64_t q = 0;
-      start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < n_queries; i++){
-        q += run.rank(vrank[i]);
-      }
-      stop = chrono::high_resolution_clock::now();
-      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-      total_time = time_span.count();
-
-      chrono::high_resolution_clock::time_point start_s, stop_s;
-      double total_time_s = 0;
-      chrono::duration< double > time_span_s;
-      uint64_t q_s = 0;
-      start_s = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vselect.size(); i++){
-        q_s += run.select(vselect[i]);
-      }
-      stop_s = chrono::high_resolution_clock::now();
-      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-      total_time_s = time_span_s.count();
-
-      print_info(256, 256, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
-                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-
-
-      cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
-      cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
-      cout << "HUFFMAN TIME " << huff_total_time * 1000000 / n_queries << "\n";
-      cout << "SELECT TIME " << select_total_time * 1000000 / n_queries << "\n";
-      block_total_time = 0;
-      tunst_total_time = 0;
-      huff_total_time = 0;
-      select_total_time = 0;
-    }
-  }
-  {
-    for(uint64_t k : ks) {
-      res_256_sd_512 run(seq, k);
-
-      chrono::high_resolution_clock::time_point start, stop;
-      double total_time = 0;
-      chrono::duration< double > time_span;
-      uint64_t q = 0;
-      start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < n_queries; i++){
-        q += run.rank(vrank[i]);
-      }
-      stop = chrono::high_resolution_clock::now();
-      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-      total_time = time_span.count();
-
-      chrono::high_resolution_clock::time_point start_s, stop_s;
-      double total_time_s = 0;
-      chrono::duration< double > time_span_s;
-      uint64_t q_s = 0;
-      start_s = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vselect.size(); i++){
-        q_s += run.select(vselect[i]);
-      }
-      stop_s = chrono::high_resolution_clock::now();
-      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-      total_time_s = time_span_s.count();
-
-      print_info(256, 512, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
-                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-
-
-      cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
-      cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
-      cout << "HUFFMAN TIME " << huff_total_time * 1000000 / n_queries << "\n";
-      cout << "SELECT TIME " << select_total_time * 1000000 / n_queries << "\n";
-      block_total_time = 0;
-      tunst_total_time = 0;
-      huff_total_time = 0;
-      select_total_time = 0;
-    }
-  }
-  {
-    for(uint64_t k : ks) {
-      res_256_sd_2048 run(seq, k);
-
-      chrono::high_resolution_clock::time_point start, stop;
-      double total_time = 0;
-      chrono::duration< double > time_span;
-      uint64_t q = 0;
-      start = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < n_queries; i++){
-        q += run.rank(vrank[i]);
-      }
-      stop = chrono::high_resolution_clock::now();
-      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-      total_time = time_span.count();
-
-      chrono::high_resolution_clock::time_point start_s, stop_s;
-      double total_time_s = 0;
-      chrono::duration< double > time_span_s;
-      uint64_t q_s = 0;
-      start_s = chrono::high_resolution_clock::now();
-      for(uint64_t i = 0; i < vselect.size(); i++){
-        q_s += run.select(vselect[i]);
-      }
-      stop_s = chrono::high_resolution_clock::now();
-      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-      total_time_s = time_span_s.count();
-
-      print_info(256, 2048, k, run.bits_tunstall_seq(), (double) run.bits_tunstall_seq() / seq.size(), (double) run.bits_tunstall_seq() / U, 
-                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
-
-
-      cout << "BLOCK TIME: " << block_total_time * 1000000 / n_queries << "\n";
-      cout << "TUNSTALL TIME " << tunst_total_time * 1000000 / n_queries << "\n";
-      cout << "HUFFMAN TIME " << huff_total_time * 1000000 / n_queries << "\n";
-      cout << "SELECT TIME " << select_total_time * 1000000 / n_queries << "\n";
-      block_total_time = 0;
-      tunst_total_time = 0;
-      huff_total_time = 0;
-      select_total_time = 0;
-    }
-  }
-  */
-  /*
-     {
-     for(uint64_t k : ks) {
-     cout << "TEST sd 512 " << k << "\n";
-     res_512_sd run(seq, k);
-     cout << "run sd 512 blocksize 512 top-" << k << " space: " << (double) run.bits_tunstall_seq() / seq.size() << "\n";
-     chrono::high_resolution_clock::time_point start, stop;
-     double total_time = 0;
-     chrono::duration< double > time_span;
-     uint64_t Q = 0;
-     start = chrono::high_resolution_clock::now();
-     for(uint64_t q = 0; q < n_queries; q++){
-     Q += run.rank(vrank[q]);
-     }
-     stop = chrono::high_resolution_clock::now();
-     time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-     total_time = time_span.count();
-     cout << "run sd 512 blocksize 512 top-" << k << " rank: " << Q << " " << total_time*1000000/vrank.size() << "\n";
-     chrono::high_resolution_clock::time_point start_s, stop_s;
-     double total_time_s = 0;
-     chrono::duration< double > time_span_s;
-     uint64_t Q_s = 0;
-     start_s = chrono::high_resolution_clock::now();
-     for(uint64_t q = 0; q < n_queries; q++){
-     Q_s += run.select(vselect[q]);
-     }
-     stop_s = chrono::high_resolution_clock::now();
-     time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-     total_time_s = time_span_s.count();
-     cout << "run sd 512 blocksize 512 top-" << k << " select: " << Q_s << " " << total_time_s*1000000/vselect.size() << "\n";
-     }
-     }
-     {
-     for(uint64_t k : ks) {
-     cout << "TEST sd 1024 " << k << "\n";
-     res_1024_sd run(seq, k);
-     cout << "run sd 1024 blocksize 512 top-" << k << " space: " << (double) run.bits_tunstall_seq() / seq.size() << "\n";
-     chrono::high_resolution_clock::time_point start, stop;
-     double total_time = 0;
-     chrono::duration< double > time_span;
-     uint64_t Q = 0;
-     start = chrono::high_resolution_clock::now();
-     for(uint64_t q = 0; q < n_queries; q++){
-     Q += run.rank(vrank[q]);
-     }
-     stop = chrono::high_resolution_clock::now();
-     time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-     total_time = time_span.count();
-     cout << "run sd 1024 blocksize 512 top-" << k << " rank: " << Q << " " << total_time << "\n";
-     chrono::high_resolution_clock::time_point start_s, stop_s;
-     double total_time_s = 0;
-     chrono::duration< double > time_span_s;
-     uint64_t Q_s = 0;
-     start_s = chrono::high_resolution_clock::now();
-     for(uint64_t q = 0; q < n_queries; q++){
-     Q_s += run.select(vselect[q]);
-     }
-     stop_s = chrono::high_resolution_clock::now();
-     time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-     total_time_s = time_span_s.count();
-     cout << "run sd 1024 blocksize 512 top-" << k << " select: " << Q_s << " " << total_time_s << "\n";
-     }
-     }
-     */
   return 0;
 }
-  /*
-  vector< uint64_t > blocks;
-  std::vector< uint64_t > R0;
-  std::vector< uint64_t > R1;
-
-  uint64_t last = seq[0];
-  R0.push_back(seq[0]);
-
-  for(uint64_t i = 1; i < seq.size(); i++) {
-    if(seq[i] > seq[i - 1] + 1) {
-      R1.push_back(seq[i - 1] - last + 1);
-      R0.push_back(seq[i] - seq[i - 1] - 1);
-      last = seq[i];
-    }
-  }
-
-  R1.push_back(seq[seq.size() - 1] - last + 1);
-
-  std::cerr << "Creating bit_vectors..." << std::endl;
-  std::vector< uint64_t > PB_R0(R0.size(), 0);
-
-  PB_R0[0] = R0[0];
-  //std::cerr << "R0: " << R0[0] << " ";
-  for(uint64_t i = 1; i < R0.size(); i++) {
-    //std::cerr << R0[i] << " ";
-    PB_R0[i] = R0[i] + PB_R0[i - 1];
-  }
-
-  R0.clear();
-
-  std::vector< uint64_t > PB_R1(R1.size(), 0);
-
-  PB_R1[0] = R1[0];
-  //std::cerr << "R1: " << R1[0] << " ";
-  for(uint64_t i = 1; i < R1.size(); i++) {
-    //std::cerr << R1[i] << " ";
-    PB_R1[i] = R1[i] + PB_R1[i - 1];
-  }
-
-  R1.clear();
-
-  cout << "Check block: " << PB_R1[14201508 * 64] << "\n";
-  uint64_t acum = PB_R1[14201508 * 64];
-  for(uint64_t i = 1; PB_R1[14201508 * 64 + i] < 2613066758; i++) {
-    cout << PB_R1[14201508 * 64 + i] << "\n";
-  }
-  cout << "Check block: " << PB_R1[14201508 * 64 + 64] << "\n";
-  PB_R1.clear();
-  PB_R0.clear();
-  */

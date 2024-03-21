@@ -68,7 +68,6 @@ public:
   uint64_t select(uint64_t k);
   uint64_t rank(uint64_t i);
 private:
-  uint64_t get_runs(std::vector<uint64_t> &pb, std::vector<uint32_t> &res);
   void top_k_encoding(std::vector< uint32_t > &pb, bool type);
 };
 

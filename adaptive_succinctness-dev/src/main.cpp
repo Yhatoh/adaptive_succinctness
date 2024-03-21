@@ -1,14 +1,8 @@
-#include <cmath>
-#include <ctime>
 #include <iostream>
-#include <ratio>
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/coder_elias_delta.hpp>
 #include <sdsl/vectors.hpp>
 #include <vector>
-#include <string>
-
-#include "../util/utils.hpp"
 //#include "RunEncoderAccess.hpp"
 #include "RunEncoderSelect.hpp"
 
@@ -28,6 +22,7 @@ int main(int argc, char **argv) {
   std::cerr << "Done reading file..." << std::endl;
   rf.close();
   */
+  /*
   sdsl::bit_vector bv;
   bv.resize(100000);
   sdsl::util::set_random_bits(bv, 42);
@@ -40,25 +35,23 @@ int main(int argc, char **argv) {
       count++;
     }
   }
+  */
   
-  /*bv.resize(61);
-    std::vector< uint64_t > seq = {2,3,4,7,8,9,13,14,19,20,21,25,26,27,30,31,36,37,38,41,42,45,49,50,51,55,56,59,60};
-    for(uint64_t i = 0; i < 61; i++) {
+  bv.resize(61);
+  std::vector< uint64_t > seq = {2,3,4,7,8,9,13,14,19,20,21,25,26,27,30,31,36,37,38,41,42,45,49,50,51,55,56,59,60};
+  for(uint64_t i = 0; i < 61; i++) {
     bv[i] = 0;
-    }
+  }
 
-    for(uint64_t i = 0; i < seq.size(); i++) {
+  for(uint64_t i = 0; i < seq.size(); i++) {
     bv[seq[i]] = 1;
-    }
-    */
+  }
   sdsl::select_support_mcl<1> select(&bv);
   sdsl::rank_support_v5<1> rank(&bv);
   std::vector< uint64_t > ks = {8, 16, 32, 64};
   for(uint64_t k : ks) {
     std::cout << "TOP_K = " << k << std::endl;
     std::cerr << "Creating top_k = 16" << std::endl;
-    //RunEncoderAccess<16, 256, 512, sdsl::bit_vector, sdsl::select_support_mcl<1>, sdsl::rank_support_v5<1>> ge_16(seq, k);
-    //RunEncoderAccess<16, 256, 512, sdsl::rrr_vector<15>, sdsl::select_support_rrr<1,15>, sdsl::rank_support_rrr<1,15>> ge_16(seq, k);
     RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>> ge_16(seq, k);
     std::cout << "SELECT OP" << std::endl;
     for(uint64_t i = 1; i <= seq.size(); i++) {
