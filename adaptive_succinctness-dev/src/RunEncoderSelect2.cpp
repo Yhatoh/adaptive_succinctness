@@ -1,15 +1,14 @@
-#include "RunEncoderSelect.hpp"
+#include "RunEncoderSelect2.hpp"
 
-#include <chrono>
 using namespace std;
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k) {
   // to do later
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k) {
 #ifdef DEBUG
   cout << "Starting compression..." << endl;
 #endif
@@ -153,8 +152,8 @@ RunEncoderSelect<w,bs,br,_bv,_select,_rank>::RunEncoderSelect(std::vector<uint64
 }
 
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+void RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::top_k_encoding(std::vector< uint32_t > &seq, bool type) {
 #ifdef DEBUG
   cout << "Executing top_k_encoding..." << endl;
   cout << "Getting frequencies of gaps..." << endl;
@@ -195,7 +194,10 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
       tc_seq.push_back(seq[i]);
     } else {
       tc_or_huff_seq.push_back(i);
-      hf_seq.push_back(seq[i]);
+      if(hf_seq.size() > 0)
+        hf_seq.push_back(seq[i] + hf_seq.back());
+      else
+        hf_seq.push_back(seq[i]);
     }
   }
  
@@ -217,15 +219,23 @@ void RunEncoderSelect<w,bs,br,_bv,_select,_rank>::top_k_encoding(std::vector< ui
 #endif 
   if(type) { // r1
     tc_r1_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w);
-    huffman_r1.encode(hf_seq, bs);
+    sdsl::bit_vector aux(hf_seq.back() + 1, 0);
+    for(auto &pos : hf_seq)
+      aux[pos] = 1;
+    s9_r1 = gap_class(aux);
+    select_s9_r1 = _select_gap(&s9_r1);
   } else { // r0
-    tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w); 
-    huffman_r0.encode(hf_seq, bs);
+    tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w);
+    sdsl::bit_vector aux(hf_seq.back() + 1, 0);
+    for(auto &pos : hf_seq)
+      aux[pos] = 1;
+    s9_r0 = gap_class(aux);
+    select_s9_r0 = _select_gap(&s9_r0); 
   }
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::bits_tunstall_seq() {
   return 8 * sdsl::size_in_bytes(tc_or_huffman_r1) + 
          8 * sdsl::size_in_bytes(rank_tchuff_r1) +
          8 * sdsl::size_in_bytes(select_tchuff_r1) +
@@ -233,26 +243,26 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::bits_tunstall_seq() {
          8 * sdsl::size_in_bytes(rank_tchuff_r0) +
          8 * sdsl::size_in_bytes(select_tchuff_r0) +
          8 * tc_r0_top_k.size() + 8 * tc_r1_top_k.size() +
-         8 * huffman_r0.size() + 8 * huffman_r1.size() +
+         8 * sdsl::size_in_bytes(s9_r0) + 8 * sdsl::size_in_bytes(s9_r1) +
          8 * size_block_r0() + 8 * size_block_r1();
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r1() {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::size_block_r1() {
   return sdsl::size_in_bytes(block_r1) +
          sdsl::size_in_bytes(select_block_r1) +
          sdsl::size_in_bytes(rank_block_r1);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::size_block_r0() {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::size_block_r0() {
   return sdsl::size_in_bytes(block_r0) +
          sdsl::size_in_bytes(select_block_r0) +
          sdsl::size_in_bytes(rank_block_r0);
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::select(uint64_t k) {
   assert(k <= n);
 
   uint64_t block = rank_block_r1(k);
@@ -313,53 +323,8 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     one_r1++;
   }
 
-  uint32_t n_decoded_r1, cur_int_r1;
-  uint32_t code_r1 = 0;
-  uint32_t bits_needed_r1 = sizeof(uint32_t) << 3;
-  uint32_t currcode_r1;
-  uint32_t currlen_r1 = sizeof(uint32_t) << 3;
-  uint32_t* lj_r1;
-  uint32_t* start_linear_search_r1 = huffman_r1.lj_base + max(LUT_BITS, huffman_r1.min_cw_len) - 1;
-
-  uint64_t symb_r1_huff;
-  uint64_t i_r1 = gap_huff_r1;
-  if(gap_huff_r1 == 0) {
-    symb_r1_huff = 0;
-    symb_r1_huff = huffman_r1.block_info_prefix_sum[gap_huff_r1/huffman_r1.block_size];
-    cur_int_r1 = huffman_r1.block_info_starting_position[gap_huff_r1/huffman_r1.block_size];
-    huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
-    huffman_r1.buff_btg = BUFF_BITS;
-
-  } else {
-    i_r1--;
-    symb_r1_huff = huffman_r1.block_info_prefix_sum[i_r1/huffman_r1.block_size];
-    cur_int_r1 = huffman_r1.block_info_starting_position[i_r1/huffman_r1.block_size];
-    i_r1 = i_r1 - (i_r1/huffman_r1.block_size)*huffman_r1.block_size;
-
-    huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
-    huffman_r1.buff_btg = BUFF_BITS;
-
-    for (n_decoded_r1 = 0; n_decoded_r1 <= i_r1; ++n_decoded_r1) {
-      code_r1 |= huffman_r1.INPUT_ULONG(cur_int_r1, bits_needed_r1);
-
-      lj_r1 = huffman_r1.lut[code_r1 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
-      if (lj_r1 == NULL)
-        for (lj_r1 = start_linear_search_r1; code_r1 < *lj_r1; lj_r1++)
-          ;
-      currlen_r1 = lj_r1 - huffman_r1.lj_base + 1;
-
-      // calculate symbol number
-      currcode_r1 = code_r1 >> ((sizeof(uint32_t) << 3) - currlen_r1);
-      currcode_r1 -= huffman_r1.min_code[currlen_r1 - 1];
-      currcode_r1 += huffman_r1.offset[currlen_r1 - 1];
-
-      symb_r1_huff += huffman_r1.syms[currcode_r1]-1;
-
-      code_r1 <<= currlen_r1;
-      bits_needed_r1 = currlen_r1;
-    }
-    i_r1++;
-  }
+  uint64_t symb_r1_huff = (gap_huff_r1 == 0 ? 0 : select_s9_r1(gap_huff_r1));
+  gap_huff_r1++;
 
   uint64_t i_r1_tunst = gap_tc_r1;
   uint64_t b_, p, block_sum, symb_r1_tunst;
@@ -396,9 +361,6 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     i_r1_tunst++;
   }
 
-  cout << "initial value\n";
-  cout << symb_r1_huff << "\n";
-  cout << symb_r1_tunst << "\n";
   while(symb_r1_tunst + symb_r1_huff < k) {
     // read from gap of run 1
     uint64_t act_ones = 0;
@@ -408,39 +370,9 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     else if(one_r1 > n_tchuff_r1) flag_acum_r1 = true;
 
     if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
-      if(i_r1 >= huffman_r1.block_size) {
-        code_r1 = 0;
-        bits_needed_r1 = sizeof(uint32_t) << 3;
-        currlen_r1 = sizeof(uint32_t) << 3;
-        start_linear_search_r1 = huffman_r1.lj_base + max(LUT_BITS, huffman_r1.min_cw_len) - 1;
 
-        symb_r1_huff = huffman_r1.block_info_prefix_sum[gap_huff_r1/huffman_r1.block_size];
-        cur_int_r1 = huffman_r1.block_info_starting_position[gap_huff_r1/huffman_r1.block_size];
-        i_r1 = gap_huff_r1 - (gap_huff_r1/huffman_r1.block_size)*huffman_r1.block_size;
-
-        huffman_r1.buff = huffman_r1.compressed_seq[cur_int_r1];
-        huffman_r1.buff_btg = BUFF_BITS;
-      }
-      code_r1 |= huffman_r1.INPUT_ULONG(cur_int_r1, bits_needed_r1);
-
-      lj_r1 = huffman_r1.lut[code_r1 >> ((sizeof(uint32_t) << 3) - LUT_BITS)];
-      if (lj_r1 == NULL)
-        for (lj_r1 = start_linear_search_r1; code_r1 < *lj_r1; lj_r1++)
-          ;
-      currlen_r1 = lj_r1 - huffman_r1.lj_base + 1;
-
-      // calculate symbol number
-      currcode_r1 = code_r1 >> ((sizeof(uint32_t) << 3) - currlen_r1);
-      currcode_r1 -= huffman_r1.min_code[currlen_r1 - 1];
-      currcode_r1 += huffman_r1.offset[currlen_r1 - 1];
-
-      symb_r1_huff += huffman_r1.syms[currcode_r1]-1;
-
-      code_r1 <<= currlen_r1;
-      bits_needed_r1 = currlen_r1;
-
-      i_r1++;
-
+      symb_r1_huff = select_s9_r1(gap_huff_r1);
+      // sum 1's in huffman
       gap_huff_r1++;
       one_r1++;
       prev_r1 = res_select_r1;
@@ -472,21 +404,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
     }
     gap_pos++;
 
-    cout << "next value\n";
-    cout << symb_r1_huff << "\n";
-    cout << symb_r1_tunst << "\n";
   }
 
   if(gap_pos <= rank_tchuff_r0.size()) gap_huff_r0 = rank_tchuff_r0(gap_pos);
   else gap_huff_r0 = n_tchuff_r0;
   gap_tc_r0 = gap_pos - gap_huff_r0;
 
-  uint64_t symb_r0_huff = (gap_huff_r0 == 0 ? 0 : huffman_r0.decode(gap_huff_r0 - 1));
+  uint64_t symb_r0_huff = (gap_huff_r0 == 0 ? 0 : select_s9_r0(gap_huff_r0));
   uint64_t symb_r0_tunst = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
 
-  cout << "R0 values\n";
-  cout << symb_r0_huff << "\n";
-  cout << symb_r0_tunst << "\n";
   pos = symb_r0_huff + symb_r0_tunst + symb_r1_huff + symb_r1_tunst;
 
   if(symb_r1_huff + symb_r1_tunst > k) {
@@ -496,8 +422,9 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::select(uint64_t k) {
   return pos - 2;
 }
 
-template< uint16_t w, uint64_t bs, uint64_t br, class _bv, class _select, class _rank>
-uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::rank(uint64_t i) {
+  /*
   i++;
   if(i >= u) return n;
   uint64_t l = 1;
@@ -684,13 +611,15 @@ uint64_t RunEncoderSelect<w,bs,br,_bv,_select,_rank>::rank(uint64_t i) {
     take_gr0 = !take_gr0;
   }
 
+
   return _ones;
+  */
+  return 0;
 }
 
-template class RunEncoderSelect<16, 256, 32, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 64, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 128, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 256, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
