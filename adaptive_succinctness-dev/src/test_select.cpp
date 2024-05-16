@@ -21,9 +21,16 @@ using namespace std;
 //typedef RunEncoderSelect<16, 256, 32,
 //                         sdsl::sd_vector<>, sdsl::select_support_sd<1>,
 //                         sdsl::rank_support_sd<1>> res_256_sd_32;
-typedef RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>,
+typedef RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>,
                          sdsl::select_support_sd<1>,
                          sdsl::rank_support_sd<1>> res_256_sd_64;
+typedef RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>,
+                         sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>> res_128_sd_64;
+typedef RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>,
+                         sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>> res_64_sd_64;
+
 
 //typedef RunEncoderAccess<16, 256, 64,
 //                         sdsl::bit_vector,
@@ -70,8 +77,8 @@ void print_info(string type, double size, double size_per_one,
 }
 int main() {
   std::vector<uint64_t> seq;
-  //std::ifstream rf("/data/bitvectors/ii/gov2/url/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
-  std::ifstream rf("/mnt/c/Users/gacar/Downloads/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
+  std::ifstream rf("/data/bitvectors/ii/gov2/url/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
+  //std::ifstream rf("/mnt/c/Users/gacar/Downloads/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
   std::cerr << "Reading file..." << std::endl;
   uint64_t reader = 0;
   while(!rf.eof()) {
@@ -79,7 +86,7 @@ int main() {
     rf.read((char*) &one, sizeof(uint64_t));
     seq.push_back(one);
     reader++;
-    if(reader >= 10000000) break;
+    //if(reader >= 10000000) break;
   }
   std::cerr << "Done reading file..." << std::endl;
   rf.close();
@@ -103,42 +110,40 @@ int main() {
     vrank.push_back(r_randomer());
     vselect.push_back(s_randomer());
   }
-  /*
-  {
-    sdsl::sd_vector<> sd(bv);
-    sdsl::rank_support_sd<1> rank_sd(&sd);
-    sdsl::select_support_sd<1> select_sd(&sd);
-    chrono::high_resolution_clock::time_point start, stop;
-    double total_time = 0;
-    chrono::duration< double > time_span;
-    uint64_t Q = 0;
-    start = chrono::high_resolution_clock::now();
-    for(uint64_t q = 0; q < n_queries; q++){
-      Q += rank_sd(vrank[q]);
-    }
-    stop = chrono::high_resolution_clock::now();
-    time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
-    total_time = time_span.count();
-    chrono::high_resolution_clock::time_point start_s, stop_s;
-    double total_time_s = 0;
-    chrono::duration< double > time_span_s;
-    uint64_t Q_s = 0;
-    start_s = chrono::high_resolution_clock::now();
-    for(uint64_t q = 0; q < n_queries; q++){
-      Q_s += select_sd(vselect[q]);
-    }
-    stop_s = chrono::high_resolution_clock::now();
-    time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
-    total_time_s = time_span_s.count();
-    uint64_t total_size = sdsl::size_in_bytes(sd) + sdsl::size_in_bytes(rank_sd) + sdsl::size_in_bytes(select_sd);
-    print_info("SD VECTOR", total_size, (double) total_size / seq.size(), (double) total_size / (seq.back() + 1),
-               Q, (double) total_time * 1000000 / n_queries, Q_s, (double) total_time_s * 1000000 / n_queries);
-  }
-  */
+//  {
+//    sdsl::sd_vector<> sd(bv);
+//    sdsl::rank_support_sd<1> rank_sd(&sd);
+//    sdsl::select_support_sd<1> select_sd(&sd);
+//    chrono::high_resolution_clock::time_point start, stop;
+//    double total_time = 0;
+//    chrono::duration< double > time_span;
+//    uint64_t Q = 0;
+//    start = chrono::high_resolution_clock::now();
+//    for(uint64_t q = 0; q < n_queries; q++){
+//      Q += rank_sd(vrank[q]);
+//    }
+//    stop = chrono::high_resolution_clock::now();
+//    time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
+//    total_time = time_span.count();
+//    chrono::high_resolution_clock::time_point start_s, stop_s;
+//    double total_time_s = 0;
+//    chrono::duration< double > time_span_s;
+//    uint64_t Q_s = 0;
+//    start_s = chrono::high_resolution_clock::now();
+//    for(uint64_t q = 0; q < n_queries; q++){
+//      Q_s += select_sd(vselect[q]);
+//    }
+//    stop_s = chrono::high_resolution_clock::now();
+//    time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
+//    total_time_s = time_span_s.count();
+//    uint64_t total_size = (sdsl::size_in_bytes(sd) + sdsl::size_in_bytes(rank_sd) + sdsl::size_in_bytes(select_sd)) * 8;
+//    print_info("SD VECTOR", total_size, (double) total_size / seq.size(), (double) total_size / (seq.back() + 1),
+//               Q, (double) total_time * 1000000 / n_queries, Q_s, (double) total_time_s * 1000000 / n_queries);
+//  }
   std::vector< uint64_t > ks = {64};//{4, 8, 16, 32, 64}; 
   {
     for(uint64_t k : ks) {
-      res_256_sd_64 run(seq, k);
+      res_64_sd_64 run(seq, k);
 
       sdsl::sd_vector<> sd(bv);
       sdsl::rank_support_sd<1> rank_sd(&sd);
@@ -170,11 +175,91 @@ int main() {
       time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
       total_time_s = time_span_s.count();
 
-      print_info("SELECT", 256, 64, k, run.bits_tunstall_seq(),
+      print_info("SELECT", 64, 64, k, run.bits_tunstall_seq(),
                  (double) run.bits_tunstall_seq() / seq.size(),
                  (double) run.bits_tunstall_seq() / (seq.back() + 1),
                  q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
     }
   }
+//  {
+//    for(uint64_t k : ks) {
+//      res_128_sd_64 run(seq, k);
+//
+//      sdsl::sd_vector<> sd(bv);
+//      sdsl::rank_support_sd<1> rank_sd(&sd);
+//      sdsl::select_support_sd<1> select_sd(&sd);
+//      chrono::high_resolution_clock::time_point start, stop;
+//      double total_time = 0;
+//      chrono::duration< double > time_span;
+//      uint64_t q = 0;
+//      start = chrono::high_resolution_clock::now();
+//      /*
+//      for(uint64_t i = 0; i < vrank.size(); i++){
+//        q += run.rank(vrank[i]);
+//      }
+//      */
+//      stop = chrono::high_resolution_clock::now();
+//      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
+//      total_time = time_span.count();
+//
+//
+//      chrono::high_resolution_clock::time_point start_s, stop_s;
+//      double total_time_s = 0;
+//      chrono::duration< double > time_span_s;
+//      uint64_t q_s = 0;
+//      start_s = chrono::high_resolution_clock::now();
+//      for(uint64_t i = 0; i < vselect.size(); i++) {
+//        q_s += run.select(vselect[i]);
+//      }
+//      stop_s = chrono::high_resolution_clock::now();
+//      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
+//      total_time_s = time_span_s.count();
+//
+//      print_info("SELECT", 128, 64, k, run.bits_tunstall_seq(),
+//                 (double) run.bits_tunstall_seq() / seq.size(),
+//                 (double) run.bits_tunstall_seq() / (seq.back() + 1),
+//                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
+//    }
+//  }
+//  {
+//    for(uint64_t k : ks) {
+//      res_256_sd_64 run(seq, k);
+//
+//      sdsl::sd_vector<> sd(bv);
+//      sdsl::rank_support_sd<1> rank_sd(&sd);
+//      sdsl::select_support_sd<1> select_sd(&sd);
+//      chrono::high_resolution_clock::time_point start, stop;
+//      double total_time = 0;
+//      chrono::duration< double > time_span;
+//      uint64_t q = 0;
+//      start = chrono::high_resolution_clock::now();
+//      /*
+//      for(uint64_t i = 0; i < vrank.size(); i++){
+//        q += run.rank(vrank[i]);
+//      }
+//      */
+//      stop = chrono::high_resolution_clock::now();
+//      time_span = chrono::duration_cast< chrono::microseconds >(stop - start);
+//      total_time = time_span.count();
+//
+//
+//      chrono::high_resolution_clock::time_point start_s, stop_s;
+//      double total_time_s = 0;
+//      chrono::duration< double > time_span_s;
+//      uint64_t q_s = 0;
+//      start_s = chrono::high_resolution_clock::now();
+//      for(uint64_t i = 0; i < vselect.size(); i++) {
+//        q_s += run.select(vselect[i]);
+//      }
+//      stop_s = chrono::high_resolution_clock::now();
+//      time_span_s = chrono::duration_cast< chrono::microseconds >(stop_s - start_s);
+//      total_time_s = time_span_s.count();
+//
+//      print_info("SELECT", 256, 64, k, run.bits_tunstall_seq(),
+//                 (double) run.bits_tunstall_seq() / seq.size(),
+//                 (double) run.bits_tunstall_seq() / (seq.back() + 1),
+//                 q, total_time * 1000000 / n_queries, q_s, total_time_s * 1000000 / n_queries);
+//    }
+//  }
   return 0;
 }
