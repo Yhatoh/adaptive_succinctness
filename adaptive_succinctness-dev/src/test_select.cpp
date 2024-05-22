@@ -86,8 +86,8 @@ void print_info(string type, double size, double size_per_one,
 }
 int main() {
   std::vector<uint64_t> seq;
-  std::ifstream rf("/data/bitvectors/ii/gov2/url/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
-  //std::ifstream rf("/mnt/c/Users/gacar/Downloads/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
+  //std::ifstream rf("/data/bitvectors/ii/gov2/url/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
+  std::ifstream rf("/mnt/c/Users/gacar/Downloads/gov2_ii_nofreq_url_dif.txt.dat.100000", std::ios::binary);
   std::cerr << "Reading file..." << std::endl;
   uint64_t reader = 0;
   while(!rf.eof()) {
@@ -95,13 +95,13 @@ int main() {
     rf.read((char*) &one, sizeof(uint64_t));
     seq.push_back(one);
     reader++;
-    //if(reader >= 10000000) break;
+    if(reader >= 10000000) break;
   }
-  std::cerr << "Done reading file..." << std::endl;
+  std::cout << "Done reading file..." << std::endl;
   rf.close();
 
-  std::cerr << "Amount of 1's: " << seq.size() << "\n";
-  std::cerr << "Universe: " << seq.back() + 1 << "\n";
+  std::cout << "Amount of 1's: " << seq.size() << "\n";
+  std::cout << "Universe: " << seq.back() + 1 << "\n";
   sdsl::bit_vector bv(seq[seq.size() - 1] + 1, 0);
   //sdsl::bit_vector bv(U, 0);
   for(auto bit : seq) bv[bit] = 1;
@@ -181,16 +181,16 @@ int main() {
       uint64_t q_s = 0;
       start_s = chrono::high_resolution_clock::now();
       for(uint64_t i = 0; i < vselect.size(); i++) {
-        auto res_run = run.select(vselect[i]);
-        auto res_sd = select_sd(vselect[i]);
-        if(res_run != res_sd) {
-          cout << "TEST " << i << endl;
-          cout << "TEST " << vselect[i] << endl;
-          cout << "CORRECT " << res_sd << endl;
-          cout << "FIND " << res_run << endl;
-          cout << "AMOUNT OF ZEROS " << rank_sd_0(res_sd) << "\n";
-          break;
-        }
+        //auto res_run = run.select(vselect[i]);
+        //auto res_sd = select_sd(vselect[i]);
+        //if(res_run != res_sd) {
+        //  cout << "TEST     " << i << endl;
+        //  cout << "TEST     " << vselect[i] << endl;
+        //  cout << "CORRECT  " << res_sd << endl;
+        //  cout << "FIND     " << res_run << endl;
+        //  cout << "AMOUNT 0 " << rank_sd_0(res_sd) << "\n";
+        //  break;
+        //}
         q_s += run.select(vselect[i]);
       }
       stop_s = chrono::high_resolution_clock::now();

@@ -33,11 +33,13 @@ public:
   tunstall_coder<w> tc_r0_top_k;
   gap_class s9_r0;
   _select_gap select_s9_r0;
+  vector< uint64_t > dict_s9_r0;
 
   // r1 encoding
   tunstall_coder<w> tc_r1_top_k;
   gap_class s9_r1;
   _select_gap select_s9_r1;
+  vector< uint64_t > dict_s9_r1;
 
   _bv tc_or_huffman_r0;
   uint64_t n_tchuff_r0;
@@ -64,7 +66,7 @@ public:
   uint64_t n_r0; // ones
   uint64_t n_r1; // ones
   uint64_t top_most_freq;
-  uint64_t symbol_tc_p;
+  double symbol_tc_p;
 
   RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k);
   RunEncoderSelect(std::vector<uint64_t> &pb, uint64_t top_k);
