@@ -187,7 +187,8 @@ void RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::top_k_en
 #endif 
   std::vector< uint64_t > tc_or_huff_seq;
 
-  std::vector< uint32_t > tc_seq, hf_seq;
+  std::vector< uint32_t > tc_seq;
+  std::vector< uint64_t > hf_seq;
 
   for(uint64_t i = 0; i < seq.size(); i++) {
     if(tc_alphabet.count(seq[i]) == 1) {
@@ -412,6 +413,7 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::sele
 
   uint64_t symb_r0_huff = (gap_huff_r0 == 0 ? 0 : select_s9_r0(gap_huff_r0));
   uint64_t symb_r0_tunst = (gap_tc_r0 == 0 ? 0 : tc_r0_top_k.decode(gap_tc_r0 - 1));
+  std::cout << symb_r0_tunst + symb_r0_huff << "\n";
 
   pos = symb_r0_huff + symb_r0_tunst + symb_r1_huff + symb_r1_tunst;
 
@@ -617,9 +619,12 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::rank
   return 0;
 }
 
-template class RunEncoderSelect<16, 64, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 128, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 64, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 128, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 64, 64, sdsl::s9_vector<>, sdsl::select_support_s9<>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 128, 64, sdsl::s9_vector<>, sdsl::select_support_s9<>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 256, 64, sdsl::s9_vector<>, sdsl::select_support_s9<>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
