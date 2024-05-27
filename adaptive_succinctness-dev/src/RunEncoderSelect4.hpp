@@ -7,12 +7,12 @@
 //#include "../../s9_vector/include/sdsl/s9_vector.hpp"
 
 #include <vector>
-#include <chrono>
-using namespace std; 
 
 #include "../util/tunstallCoder.hpp"
 //#include "../util/huffman_coder.hpp"
 
+#include <chrono>
+using namespace std;
 
 extern std::chrono::high_resolution_clock::time_point block_start, block_stop;
 extern std::chrono::high_resolution_clock::time_point tunst_start, tunst_stop;
@@ -24,20 +24,18 @@ extern double tunst_total_time;
 extern double huff_total_time;
 extern double select_total_time;
 
-template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _bv, class _select, class _rank>
 class RunEncoderSelect {
 public:
   //tunstall_coder<w> tc_r0;
   // r0 encoding
   tunstall_coder<w> tc_r0_top_k;
-  gap_class s9_r0;
-  _select_gap select_s9_r0;
+  gap_class* s9_r0;
   std::vector< uint64_t > dict_s9_r0;
 
   // r1 encoding
   tunstall_coder<w> tc_r1_top_k;
-  gap_class s9_r1;
-  _select_gap select_s9_r1;
+  gap_class* s9_r1;
   std::vector< uint64_t > dict_s9_r1;
 
   _bv tc_or_huffman_r0;
@@ -218,6 +216,10 @@ public:
     sdsl::util::init_support(select_tchuff_r0, &tc_or_huffman_r0);
     sdsl::util::init_support(select_tchuff_r1, &tc_or_huffman_r1);
   }
+  ~RunEncoderSelect() {
+    delete s9_r0;
+    delete s9_r1;
+  }
   uint64_t bits_tunstall_seq() {
     return 8 * sdsl::size_in_bytes(tc_or_huffman_r1) + 
            8 * sdsl::size_in_bytes(rank_tchuff_r1) +
@@ -226,7 +228,7 @@ public:
            8 * sdsl::size_in_bytes(rank_tchuff_r0) +
            8 * sdsl::size_in_bytes(select_tchuff_r0) +
            8 * tc_r0_top_k.size() + 8 * tc_r1_top_k.size() +
-           8 * sdsl::size_in_bytes(s9_r0) + 8 * sdsl::size_in_bytes(s9_r1) +
+           8 * sdsl::size_in_bytes(*s9_r0) + 8 * sdsl::size_in_bytes(*s9_r1) +
            8 * sizeof(uint64_t) * (dict_s9_r0.size() + dict_s9_r1.size()) + 
            8 * size_block_r0() + 8 * size_block_r1();
   }
@@ -340,7 +342,7 @@ public:
     }
 
     uint64_t symb_r1_huff = select_block_r1(block) - symb_r1_tunst;
-    uint64_t prev_select = (gap_huff_r1 == 0 ? 0 : select_s9_r1(gap_huff_r1));
+    uint64_t prev_select = (gap_huff_r1 == 0 ? 0 : s9_r1->select(gap_huff_r1));
 
     uint64_t backup_gap_pos = gap_pos;
 
@@ -362,7 +364,7 @@ public:
       if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
 
         //symb_r1_huff = select_s9_r1(gap_huff_r1);
-        uint64_t prefix_run = select_s9_r1(gap_huff_r1 + 1);
+        uint64_t prefix_run = s9_r1->select(gap_huff_r1 + 1);
         uint64_t symbol = prefix_run - prev_select;
         prev_select = prefix_run;
         symb_r1_huff += dict_s9_r1[symbol];
@@ -432,23 +434,14 @@ public:
     cout << "Gap Tunstall R0 now: " << gap_tc_r0_2 << endl;
     cout << "Gap Tunstall R0 obj: " << gap_tc_r0 << endl;
 #endif
-    prev_select = (gap_huff_r0_2 == 0 ? 0 : select_s9_r0(gap_huff_r0_2));
+    prev_select = (gap_huff_r0_2 == 0 ? 0 : s9_r0->select(gap_huff_r0_2));
 
 #ifdef DEBUG
     cout << "Starting cycle to comput symbols..." << endl;
 #endif
     for(gap_huff_r0_2 = gap_huff_r0_2; gap_huff_r0_2 < gap_huff_r0; gap_huff_r0_2++) {
-#ifdef DEBUG
-      cout << "Gap huff act: " << gap_huff_r0_2 << endl;
-      cout << "Gap huff act + 1: " << gap_huff_r0_2 + 1 << endl;
-#endif
-      uint64_t prefix_run = select_s9_r0(gap_huff_r0_2 + 1);
+      uint64_t prefix_run = s9_r0->select(gap_huff_r0_2 + 1);
       uint64_t symbol = prefix_run - prev_select;
-#ifdef DEBUG
-      cout << "Symbol obtained: " << symbol << endl;
-      cout << "Prefix run obtained: " << prefix_run << endl;
-      cout << "PRev Prefix run obtained: " << prev_select << endl;
-#endif
       prev_select = prefix_run; 
       symb_r0_huff += dict_s9_r0[symbol];
     }
@@ -470,8 +463,8 @@ public:
     }
 
     return pos - 2;
-
   }
+
   uint64_t rank(uint64_t i) { return 0; }
 private:
   void top_k_encoding(std::vector< uint32_t > &seq, bool type) {
@@ -593,11 +586,6 @@ private:
       new_seq.push_back(encode_symbols[symbol] + (new_seq.size() > 0 ? new_seq.back() : 0));
     }
 
-    sdsl::bit_vector aux(new_seq.back() + 1, 0);
-    for(auto &pos : new_seq) {
-      aux[pos] = 1;
-    }
-
 #ifdef DEBUG
     cout << (type ? "RUNS OF 1's INFO" : "RUNS OF 0's INFO" ) << endl;
     cout << "Distinct Symbols in huff: " << encode << endl;
@@ -611,8 +599,7 @@ private:
         dict_s9_r1[code.second] = code.first;
       }
 
-      s9_r1 = gap_class(aux);
-      select_s9_r1 = _select_gap(&s9_r1);
+      s9_r1 = new gap_class(new_seq.begin(), new_seq.end());
     } else { // r0
       tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w);
 
@@ -621,8 +608,7 @@ private:
         dict_s9_r0[code.second] = code.first;
       }
 
-      s9_r0 = gap_class(aux);
-      select_s9_r0 = _select_gap(&s9_r0); 
+      s9_r0 = new gap_class(new_seq.begin(), new_seq.end());
     }
   }
 

@@ -53,14 +53,6 @@ typedef RunEncoderSelect<16, 64, 64, sdsl::s18::vector<256>, sdsl::s18::select_s
                          sdsl::select_support_sd<1>,
                          sdsl::rank_support_sd<1>> res_64_sd_64;
 
-//class select_support_la {
-//  public:
-//    la_vector<uint64_t, 0, bucketing_top_level> bv;
-//    select_support_la(la_vector<uint64_t, 0, bucketing_top_level> &cv) : bv(cv) {}
-//    uint64_t operator()(uint64_t const key) const {
-//      return bv.select(key);
-//    }
-//};
 //typedef RunEncoderSelect<16, 256, 64, la_vector_opt<uint64_t>, select_support_la, sdsl::sd_vector<>,
 //                         sdsl::select_support_sd<1>,
 //                         sdsl::rank_support_sd<1>> res_256_la_64;
