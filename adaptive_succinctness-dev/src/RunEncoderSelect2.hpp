@@ -4,7 +4,7 @@
 #include <sdsl/bit_vectors.hpp>
 #include <sdsl/int_vector.hpp>
 
-#include "../../s9_vector/include/sdsl/s9_vector.hpp"
+//#include "../../s9_vector/include/sdsl/s9_vector.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -33,13 +33,13 @@ public:
   tunstall_coder<w> tc_r0_top_k;
   gap_class s9_r0;
   _select_gap select_s9_r0;
-  vector< uint64_t > dict_s9_r0;
+  std::vector< uint64_t > dict_s9_r0;
 
   // r1 encoding
   tunstall_coder<w> tc_r1_top_k;
   gap_class s9_r1;
   _select_gap select_s9_r1;
-  vector< uint64_t > dict_s9_r1;
+  std::vector< uint64_t > dict_s9_r1;
 
   _bv tc_or_huffman_r0;
   uint64_t n_tchuff_r0;

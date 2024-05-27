@@ -1,4 +1,6 @@
-#include "RunEncoderSelect2.hpp"
+#ifndef _RUNENCODERSDARRAY2_HPPXD_
+#define _RUNENCODERSDARRAY2_HPPXD_
+#include "RunEncoderSelect3.hpp"
 
 //#include "/home/gcarmona/la_vector/include/la_vector.hpp"
 using namespace std;
@@ -7,6 +9,14 @@ using namespace std;
 template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
 RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::RunEncoderSelect(sdsl::bit_vector &bv, uint64_t top_k) {
   // to do later
+}
+
+template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
+RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::~RunEncoderSelect() {
+  delete s9_r0;
+  delete select_s9_r0;
+  delete s9_r1;
+  delete select_s9_r1;
 }
 
 template< uint16_t w, uint64_t bs, uint64_t br, class gap_class, class _select_gap, class _bv, class _select, class _rank>
@@ -300,8 +310,8 @@ void RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::top_k_en
       dict_s9_r1[code.second] = code.first;
     }
 
-    s9_r1 = gap_class(aux);
-    select_s9_r1 = _select_gap(&s9_r1);
+    s9_r1 = new gap_class(aux);
+    select_s9_r1 = new _select_gap(*s9_r1);
   } else { // r0
     tc_r0_top_k = tunstall_coder<w>(tc_seq, bs, 1 << w);
 
@@ -310,8 +320,8 @@ void RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::top_k_en
       dict_s9_r0[code.second] = code.first;
     }
 
-    s9_r0 = gap_class(aux);
-    select_s9_r0 = _select_gap(&s9_r0); 
+    s9_r0 = new gap_class(aux);
+    select_s9_r0 = new _select_gap(*s9_r0); 
   }
 }
 
@@ -324,7 +334,7 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::bits
          8 * sdsl::size_in_bytes(rank_tchuff_r0) +
          8 * sdsl::size_in_bytes(select_tchuff_r0) +
          8 * tc_r0_top_k.size() + 8 * tc_r1_top_k.size() +
-         8 * sdsl::size_in_bytes(s9_r0) + 8 * sdsl::size_in_bytes(s9_r1) +
+         8 * sdsl::size_in_bytes(*s9_r0) + 8 * sdsl::size_in_bytes(*s9_r1) +
          8 * sizeof(uint64_t) * (dict_s9_r0.size() + dict_s9_r1.size()) + 
          8 * size_block_r0() + 8 * size_block_r1();
 }
@@ -444,7 +454,7 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::sele
   }
 
   uint64_t symb_r1_huff = select_block_r1(block) - symb_r1_tunst;
-  uint64_t prev_select = (gap_huff_r1 == 0 ? 0 : select_s9_r1(gap_huff_r1));
+  uint64_t prev_select = (gap_huff_r1 == 0 ? 0 : (*select_s9_r1)(gap_huff_r1));
 
   uint64_t backup_gap_pos = gap_pos;
 
@@ -466,7 +476,7 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::sele
     if(!flag_acum_r1 && res_select_r1 == prev_r1 + 1) {
 
       //symb_r1_huff = select_s9_r1(gap_huff_r1);
-      uint64_t prefix_run = select_s9_r1(gap_huff_r1 + 1);
+      uint64_t prefix_run = (*select_s9_r1)(gap_huff_r1 + 1);
       uint64_t symbol = prefix_run - prev_select;
       prev_select = prefix_run;
       symb_r1_huff += dict_s9_r1[symbol];
@@ -536,23 +546,14 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::sele
   cout << "Gap Tunstall R0 now: " << gap_tc_r0_2 << endl;
   cout << "Gap Tunstall R0 obj: " << gap_tc_r0 << endl;
 #endif
-  prev_select = (gap_huff_r0_2 == 0 ? 0 : select_s9_r0(gap_huff_r0_2));
+  prev_select = (gap_huff_r0_2 == 0 ? 0 : (*select_s9_r0)(gap_huff_r0_2));
 
 #ifdef DEBUG
   cout << "Starting cycle to comput symbols..." << endl;
 #endif
   for(gap_huff_r0_2 = gap_huff_r0_2; gap_huff_r0_2 < gap_huff_r0; gap_huff_r0_2++) {
-#ifdef DEBUG
-    cout << "Gap huff act: " << gap_huff_r0_2 << endl;
-    cout << "Gap huff act + 1: " << gap_huff_r0_2 + 1 << endl;
-#endif
-    uint64_t prefix_run = select_s9_r0(gap_huff_r0_2 + 1);
+    uint64_t prefix_run = (*select_s9_r0)(gap_huff_r0_2 + 1);
     uint64_t symbol = prefix_run - prev_select;
-#ifdef DEBUG
-    cout << "Symbol obtained: " << symbol << endl;
-    cout << "Prefix run obtained: " << prefix_run << endl;
-    cout << "PRev Prefix run obtained: " << prev_select << endl;
-#endif
     prev_select = prefix_run; 
     symb_r0_huff += dict_s9_r0[symbol];
   }
@@ -771,12 +772,24 @@ uint64_t RunEncoderSelect<w,bs,br,gap_class,_select_gap,_bv,_select,_rank>::rank
   return 0;
 }
 
+template<uint16_t bs, class vector_type>
+class sdsl::s18::vector;
+
+template class RunEncoderSelect<16, 256, 64, sdsl::s18::vector<256>, sdsl::s18::select_support<1, 256>, sdsl::sd_vector<>,
+                         sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 128, 64, sdsl::s18::vector<256>, sdsl::s18::select_support<1, 256>, sdsl::sd_vector<>,
+                         sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>>;
+template class RunEncoderSelect<16, 64, 64, sdsl::s18::vector<256>, sdsl::s18::select_support<1, 256>, sdsl::sd_vector<>,
+                         sdsl::select_support_sd<1>,
+                         sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 64, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 128, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 64, sdsl::s9_vector<128, sdsl::int_vector<32>>, sdsl::select_support_s9<1, 128, sdsl::int_vector<32>>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
-template class RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 64, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+//template class RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 128, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 256, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 256, 512, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
@@ -785,3 +798,4 @@ template class RunEncoderSelect<16, 256, 64, sdsl::sd_vector<>, sdsl::select_sup
 //template class RunEncoderSelect<16, 128, 64, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 512, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
 //template class RunEncoderSelect<16, 1024, 2048, sdsl::sd_vector<>, sdsl::select_support_sd<1>, sdsl::rank_support_sd<1>>;
+#endif
